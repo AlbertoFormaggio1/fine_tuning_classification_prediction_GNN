@@ -42,6 +42,7 @@ print(model)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
-train.train(model, dataset.data, dataset.data, criterion, optimizer, 5)
+results = engine.train(model, dataset.data, dataset.data, criterion, optimizer, 50)
 
-print(dataset.data.train_mask)
+for r in results.values():
+    print(r)

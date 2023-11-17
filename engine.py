@@ -3,9 +3,8 @@ from torch_geometric.datasets import Planetoid
 from tqdm.auto import tqdm
 
 
-def train(model, train_ds, val_ds, loss_fn: torch.nn.Module ,
+def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
           opt: torch.optim.Optimizer, epochs: int):
-    
     results = {"train_loss": [],
                "train_acc": [],
                "val_loss": [],
@@ -19,24 +18,31 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module ,
 
         # every 10 epochs see the improvement on the validation set
         if epoch % 10 == 0:
-            val_loss, val_acc = eval(model, val_ds)
+            val_loss, val_acc = eval(model, loss_fn, val_ds)
             results['val_loss'].append(val_loss)
             results['val_acc'].append(val_acc)
 
+    return results
 
-def eval(model, test_ds):
-    return 0, 0
+
+def eval(model, loss_fn, val_ds):
+    with torch.no_grad():
+        out = model(val_ds.x)
+        loss = loss_fn(out[val_ds.test_mask], val_ds.y[val_ds.test_mask]).item()
+        cls = out.argmax(dim=-1)
+        acc = torch.sum(cls[val_ds.test_mask] == val_ds.y[val_ds.test_mask]) / torch.sum(val_ds.test_mask)
+
+        return loss, acc.item()
 
 def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
                opt: torch.optim.Optimizer):
+    model.train()  # Set the model in training phase
+    out = model(ds.x)  # Compute the response of the model
+    loss = loss_fn(out[ds.train_mask], ds.y[ds.train_mask])  # Compute the loss based on training nodes
+    loss.backward()  # Propagate the gradient
+    opt.step()  # Update the weights
 
-    model.train()   #Set the model in training phase
-    out = model(ds.x)   # Compute the response of the model
-    loss = loss_fn(out[ds.train_mask], ds.y[ds.train_mask])     # Compute the loss based on training nodes
-    loss.backward()     #Propagate the gradient
-    opt.step()  #Update the weights
-
-    train_loss = loss.item()    #Get the loss
+    train_loss = loss.item()  # Get the loss
     # Compute the classification accuracy
     train_cls = out.argmax(dim=-1)
     train_acc = torch.sum(train_cls[ds.train_mask] == ds.y[ds.train_mask]) / torch.sum(ds.train_mask)
