@@ -25,7 +25,7 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module ,
 
 
 def eval(model, test_ds):
-    return 0,0
+    return 0, 0
 
 def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
                opt: torch.optim.Optimizer):
