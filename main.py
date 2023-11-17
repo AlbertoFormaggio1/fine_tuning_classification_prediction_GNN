@@ -2,7 +2,7 @@ import torch
 import os
 from torch_geometric.transforms import NormalizeFeatures
 import load_dataset
-import train
+import engine
 
 datasets = {}
 
