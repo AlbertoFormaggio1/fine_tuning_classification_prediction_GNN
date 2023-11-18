@@ -22,7 +22,7 @@ model = model.GAT(dataset.num_features, dataset.num_classes)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion => CrossEntropyLoss in the case of classification
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
-results = engine.train(model, dataset.data, dataset.data, criterion, optimizer, 50)
+results = engine.train(model, dataset.data, dataset.data, criterion, optimizer, 10, False)
 
 for r in results.values():
     print(r)
