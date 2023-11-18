@@ -24,5 +24,5 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
 results = engine.train(model, dataset.data, dataset.data, criterion, optimizer, 10, False)
 
-for r in results.values():
-    print(r)
+for k, r in results.items():
+    print(k, r)
