@@ -24,6 +24,7 @@ class MLP(nn.Module):
         return self.MLP(x)
 
 # Check the parameters of GCN to find the best configuration.
+# https://arxiv.org/abs/1609.02907
 class GCN(nn.Module):
     def __init__(self, input_size: int, hidden_channels: int, embedding_size: int, dropout: float = 0.5):
         super().__init__()
@@ -41,6 +42,7 @@ class GCN(nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
+# https://arxiv.org/abs/2105.14491
 class GAT(nn.Module):
     def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, heads:int = 8):
         super().__init__()
@@ -60,7 +62,7 @@ class GAT(nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
-
+# https://arxiv.org/pdf/1706.02216v4.pdf
 class Graph_SAGE(nn.Module):
     def __init__(self, input_size: int, embedding_dim: int, hidden_size: int = 512, dropout: float = 0.5):
         # Using 2 layers has led to the best results in the original paper.
