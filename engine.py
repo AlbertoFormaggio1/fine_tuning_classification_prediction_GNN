@@ -26,7 +26,7 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
             if batch_generation:
                 batch_size = batch.batch_size
             else:
-                batch_size = torch.sum(batch.train_mask)
+                batch_size = torch.sum(batch.train_mask).item()
             batch_num += batch_size
             train_loss += cur_train_loss * float(batch_size)
             train_acc += cur_train_acc * float(batch_size)
