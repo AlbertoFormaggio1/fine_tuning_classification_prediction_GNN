@@ -3,6 +3,7 @@ import os
 from torch_geometric.transforms import NormalizeFeatures
 import load_dataset
 import engine
+import model
 
 datasets = {}
 
@@ -16,30 +17,9 @@ for ds in datasets.values():
 
 dataset = datasets['cora']
 
-import torch
-from torch.nn import Linear
-import torch.nn.functional as F
+model = model.GAT(dataset.num_features, dataset.num_classes)
 
-
-class MLP(torch.nn.Module):
-    def __init__(self, hidden_channels):
-        super().__init__()
-        torch.manual_seed(12345)
-        self.lin1 = Linear(dataset.num_features, hidden_channels)
-        self.lin2 = Linear(hidden_channels, dataset.num_classes)
-
-    def forward(self, x):
-        x = self.lin1(x)
-        x = x.relu()
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin2(x)
-        return x
-
-model = MLP(hidden_channels=16)
-print(model)
-
-
-criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion => CrossEntropyLoss in the case of classification
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
 results = engine.train(model, dataset.data, dataset.data, criterion, optimizer, 50)

@@ -27,17 +27,17 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
 
 def eval(model, loss_fn, val_ds):
     with torch.no_grad():
-        out = model(val_ds.x)
-        loss = loss_fn(out[val_ds.test_mask], val_ds.y[val_ds.test_mask]).item()
+        out = model(val_ds.x, val_ds.edge_index)
+        loss = loss_fn(out[val_ds.val_mask], val_ds.y[val_ds.val_mask]).item()
         cls = out.argmax(dim=-1)
-        acc = torch.sum(cls[val_ds.test_mask] == val_ds.y[val_ds.test_mask]) / torch.sum(val_ds.test_mask)
+        acc = torch.sum(cls[val_ds.val_mask] == val_ds.y[val_ds.val_mask]) / torch.sum(val_ds.val_mask)
 
-        return loss, acc.item()
+    return loss, acc.item()
 
 def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
                opt: torch.optim.Optimizer):
     model.train()  # Set the model in training phase
-    out = model(ds.x)  # Compute the response of the model
+    out = model(ds.x, ds.edge_index)  # Compute the response of the model
     loss = loss_fn(out[ds.train_mask], ds.y[ds.train_mask])  # Compute the loss based on training nodes
     loss.backward()  # Propagate the gradient
     opt.step()  # Update the weights
