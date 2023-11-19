@@ -111,7 +111,7 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
     return loss.item()
 
 @torch.no_grad()
-def test(model, data):
+def eval_predictor(model, data):
     model.eval()
     z = model(data.x, data.edge_index)
     out = model.decode(z, data.edge_label_index).view(-1).sigmoid()

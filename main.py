@@ -62,5 +62,5 @@ else:
 
     engine.train_link_prediction(model, train_ds, criterion, optimizer, 200)
 
-    acc = engine.test(model, val_ds)
+    acc = engine.eval_predictor(model, val_ds)
     print(acc)
