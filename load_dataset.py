@@ -2,7 +2,6 @@ from torch_geometric.datasets import Planetoid
 
 def load_ds(dataset_name, transform):
     dataset = Planetoid(root='data/Planetoid', name=dataset_name, transform=transform)
-
     return dataset
 
 def print_ds_info(ds : Planetoid):

@@ -5,6 +5,20 @@ from torch.functional import F
 from torch_geometric.loader import NeighborLoader
 from torch_geometric.nn import SAGEConv
 
+
+class LinkPredictor(nn.Module):
+    def decode(self, embeddings, edge_label_index):
+        # Computing similarity between embeddings in the training set + negative examples returned by the function for sampling
+        simil = embeddings[edge_label_index[0]] * embeddings[edge_label_index[1]]
+        return simil.sum(dim=-1)
+
+    def decode_all(self, embedding):
+        # Compute the similarity as ZZ^T
+        prob_adj = embedding @ embedding.t()
+        # to investigate what this does ??
+        return (prob_adj > 0).nonzero(as_tuple=False).t()
+
+
 ########## QUESTION: SHOULD DROPOUT BE ADDED?
 ########## https://dl.acm.org/doi/pdf/10.1145/3487553.3524725
 class MLP(nn.Module):
@@ -23,10 +37,11 @@ class MLP(nn.Module):
     def forward(self, x):
         return self.MLP(x)
 
+
 # Check the parameters of GCN to find the best configuration.
 # https://arxiv.org/abs/1609.02907
 class GCN(nn.Module):
-    def __init__(self, input_size: int, hidden_channels: int, embedding_size: int, dropout: float = 0.5):
+    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, dropout: float = 0.5):
         super().__init__()
         # Should parameter improved = True?
         # Cached should be used for transductive learning, which is the case of our link prediction.
@@ -37,10 +52,30 @@ class GCN(nn.Module):
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
-        x = nn.ReLU(x)
+        x = nn.ELU()(x)
         x = self.dropout(x)
         x = self.conv2(x, edge_index)
         return x
+
+
+# TO ERASE, only to test the link prediction
+class GCN_Predictor(LinkPredictor):
+    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, dropout: float = 0.5):
+        super().__init__()
+        # Should parameter improved = True?
+        # Cached should be used for transductive learning, which is the case of our link prediction.
+        # we need to see if it's possible to modify it when changing task or not
+        self.conv1 = GCNConv(input_size, hidden_channels, improved=True)
+        self.conv2 = GCNConv(hidden_channels, embedding_size, improved=True)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index)
+        x = nn.ELU()(x)
+        x = self.dropout(x)
+        x = self.conv2(x, edge_index)
+        return x
+
 
 # https://arxiv.org/abs/2105.14491
 class GAT(nn.Module):
@@ -62,6 +97,7 @@ class GAT(nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
+
 # https://arxiv.org/pdf/1706.02216v4.pdf
 class Graph_SAGE(nn.Module):
     def __init__(self, input_size: int, embedding_dim: int, hidden_size: int = 512, dropout: float = 0.5):
@@ -74,13 +110,13 @@ class Graph_SAGE(nn.Module):
         self.sage2 = SAGEConv(hidden_size, embedding_dim, aggr='max')
         self.dropout = nn.Dropout(p=dropout)
 
-
     def forward(self, x, edge_index):
         x = self.sage1(x, edge_index)
         x = nn.ELU()(x)
         x = self.dropout(x)
         x = self.sage2(x, edge_index)
         return x
+
 
 class SAGE_MLP(nn.Module):
     def __init__(self, sage, mlp):
@@ -93,6 +129,7 @@ class SAGE_MLP(nn.Module):
         x = self.sage(x)
         x = self.mlp(x)
         return x
+
 
 class GAT_MLP(nn.Module):
     """
