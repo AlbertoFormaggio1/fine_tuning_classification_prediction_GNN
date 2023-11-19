@@ -77,7 +77,7 @@ def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
 def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
           opt: torch.optim.Optimizer, epochs: int):
 
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs)):
         model.train()
         opt.zero_grad()
         # Computing first the embeddings with message passing on the edges that are already existing

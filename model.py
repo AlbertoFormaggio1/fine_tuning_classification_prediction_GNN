@@ -15,7 +15,7 @@ class LinkPredictor(nn.Module):
     def decode_all(self, embedding):
         # Compute the similarity as ZZ^T
         prob_adj = embedding @ embedding.t()
-        # to investigate what this does ??
+        # Returns indices of nonzero elements
         return (prob_adj > 0).nonzero(as_tuple=False).t()
 
 
@@ -28,8 +28,8 @@ class MLP(nn.Module):
 
         for h in hidden_sizes:
             layers.append(nn.Linear(in_features=input_size, out_features=h))
-            layers.append(nn.ELU()) # ELU has proved to be better than ReLU
-            layers.append(nn.Dropout(p=dropout)) # Can be omitted? Or which is the best value for it?
+            layers.append(nn.ELU())     # ELU has proved to be better than ReLU
+            layers.append(nn.Dropout(p=dropout))    # Can dropout be omitted? Or which is the best value for it?
 
         layers.append(nn.Linear(in_features=hidden_sizes[-1], out_features=num_classes))
         self.MLP = nn.Sequential(layers)
@@ -40,7 +40,7 @@ class MLP(nn.Module):
 
 # Check the parameters of GCN to find the best configuration.
 # https://arxiv.org/abs/1609.02907
-class GCN(nn.Module):
+class GCN(LinkPredictor):
     def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, dropout: float = 0.5):
         super().__init__()
         # Should parameter improved = True?
@@ -56,29 +56,9 @@ class GCN(nn.Module):
         x = self.dropout(x)
         x = self.conv2(x, edge_index)
         return x
-
-
-# TO ERASE, only to test the link prediction
-class GCN_Predictor(LinkPredictor):
-    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, dropout: float = 0.5):
-        super().__init__()
-        # Should parameter improved = True?
-        # Cached should be used for transductive learning, which is the case of our link prediction.
-        # we need to see if it's possible to modify it when changing task or not
-        self.conv1 = GCNConv(input_size, hidden_channels, improved=True)
-        self.conv2 = GCNConv(hidden_channels, embedding_size, improved=True)
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index)
-        x = nn.ELU()(x)
-        x = self.dropout(x)
-        x = self.conv2(x, edge_index)
-        return x
-
 
 # https://arxiv.org/abs/2105.14491
-class GAT(nn.Module):
+class GAT(LinkPredictor):
     def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, heads:int = 8):
         super().__init__()
         # 256 channels seemed the best in the paper (but it depends on the complexity of the dataset)
@@ -99,7 +79,7 @@ class GAT(nn.Module):
 
 
 # https://arxiv.org/pdf/1706.02216v4.pdf
-class Graph_SAGE(nn.Module):
+class Graph_SAGE(LinkPredictor):
     def __init__(self, input_size: int, embedding_dim: int, hidden_size: int = 512, dropout: float = 0.5):
         # Using 2 layers has led to the best results in the original paper.
         # furthermore, they reported that max and LSTM were the best and similar in terms of accuracy.
@@ -118,7 +98,7 @@ class Graph_SAGE(nn.Module):
         return x
 
 
-class SAGE_MLP(nn.Module):
+class SAGE_MLP(LinkPredictor):
     def __init__(self, sage, mlp):
         super().__init__()
         self.sage = sage
@@ -131,7 +111,7 @@ class SAGE_MLP(nn.Module):
         return x
 
 
-class GAT_MLP(nn.Module):
+class GAT_MLP(LinkPredictor):
     """
     Please note that the class returns logits. They should be processed according to the graph task (e.g. softmax for
     node classification or sigmoid for link prediction).
@@ -147,7 +127,7 @@ class GAT_MLP(nn.Module):
         return x
 
 
-class GCN_MLP(nn.Module):
+class GCN_MLP(LinkPredictor):
     """
         Please note that the class returns logits. They should be processed according to the graph task (e.g. softmax for
         node classification or sigmoid for link prediction).

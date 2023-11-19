@@ -7,7 +7,7 @@ import torch_geometric.transforms as T
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-classification = False
+classification = True
 
 if classification:
 
@@ -55,12 +55,12 @@ else:
     dataset = datasets['cora']
     train_ds, val_ds, test_ds = dataset[0]
 
-    model = model.GCN_Predictor(dataset.num_features, dataset.num_classes)
+    model = model.GCN(dataset.num_features, dataset.num_classes)
 
     criterion = torch.nn.BCEWithLogitsLoss()  # Define loss criterion => Binary Cross Entropy for link prediction
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
-    engine.train_link_prediction(model, train_ds, criterion, optimizer, 101)
+    engine.train_link_prediction(model, train_ds, criterion, optimizer, 200)
 
     acc = engine.test(model, val_ds)
     print(acc)
