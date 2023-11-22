@@ -10,7 +10,15 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Only for debugging purposes: set it to true if you want to test the classification
 # Set it to false if you want to test the link prediction
-classification = True
+classification = False
+
+# TODO train different models and find the best parameters
+# TODO automatize everything (training on different datasets and models with a loop)
+# TODO display data appropriately and to understand better the results of a run (with a table for example from tabulate plugin)
+# this way you run the algorithm once and you get all the needed values in an understandable way
+# TODO start with seeing the effect of the MLP and how to tune it appropriately: more/less layers? what should be the embedding size?
+# what should be the hidden size?
+# TODO start applying the fine-tuning approach we described based on the results of previous steps
 
 if classification:
 

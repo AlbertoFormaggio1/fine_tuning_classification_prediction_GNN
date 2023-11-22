@@ -96,7 +96,7 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
     :return:
     """
 
-    for epoch in tqdm(range(epochs)):
+    for _ in tqdm(range(epochs)):
         model.train() # Set the model in training phase
         opt.zero_grad()
         # Computing first the embeddings with message passing on the edges that are already existing
@@ -121,7 +121,6 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
                                 train_ds.edge_label.new_zeros(neg_edge_index.size(1))], dim=0)
 
         #out = model.decode(z, edge_label_index).view(-1)
-        # Let's understand first what decode returns
         out = model.decode(z, edge_label_index)
         loss = loss_fn(out, edge_label)
         loss.backward()
@@ -130,6 +129,7 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
     return loss.item()
 
 """
+************************            TO DO              ************************************* (or maybe not, see what's more clear and easy)
 This eval_predictor may be included into eval.
 The difference is the following: eval_predictor is computing the performance (AUC) of the link predictor
 eval instead computes the accuracy of the classifier
