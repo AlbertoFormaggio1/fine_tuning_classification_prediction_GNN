@@ -5,7 +5,10 @@ from torch.functional import F
 from torch_geometric.loader import NeighborLoader
 from torch_geometric.nn import SAGEConv
 
-
+"""
+We instantiate the models starting from the Link predictor, which is already providing the functions to compute the similarities 
+between embeddings. This will be the same for every model, they will inherit this methods.
+"""
 class LinkPredictor(nn.Module):
     def decode(self, embeddings, edge_label_index):
         # Computing similarity between embeddings in the training set + negative examples returned by the function for sampling
@@ -15,8 +18,12 @@ class LinkPredictor(nn.Module):
     def decode_all(self, embedding):
         # Compute the similarity as ZZ^T
         prob_adj = embedding @ embedding.t()
-        # Returns indices of nonzero elements
+        # Returns indices of nonzero elements. the traspose is so that the results will be as a row vector (im not sure, try to run it and check)
         return (prob_adj > 0).nonzero(as_tuple=False).t()
+
+    def forward(self, x, edge_index):
+        # It is not possible to create instances of link predictor not associated with any architecture
+        raise NotImplementedError
 
 
 ########## QUESTION: SHOULD DROPOUT BE ADDED?
