@@ -111,9 +111,9 @@ class SAGE_MLP(LinkPredictor):
         self.sage = sage
         self.mlp = mlp
 
-    def forward(self, x):
+    def forward(self, x, edge_index):
         super().__init__()
-        x = self.sage(x)
+        x = self.sage(x, edge_index)
         x = self.mlp(x)
         return x
 
