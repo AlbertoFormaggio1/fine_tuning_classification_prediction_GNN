@@ -67,7 +67,7 @@ class GCN(LinkPredictor):
 
 # https://arxiv.org/abs/2105.14491
 class GAT(LinkPredictor):
-    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, heads:int = 8, dropout:float = 0.6):
+    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, heads: int = 8, dropout: float = 0.6):
         super().__init__()
         # 256 channels seemed the best in the paper (but it depends on the complexity of the dataset)
         # LR = 0.001/0.01

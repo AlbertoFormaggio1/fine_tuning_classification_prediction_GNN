@@ -141,6 +141,5 @@ engine.train_link_prediction(model_2, optimizer, epochs=RESTANTI EPOCHE PER RAGG
 # Embedding size
 # hidden size (MLP)
 # Lr (Dai paper)
-# Hidden channels delle reti GNN (Dai paper)
-# Dropout (?)
+# (Tutti parametri messi nei costruttori)
 # Epoche
