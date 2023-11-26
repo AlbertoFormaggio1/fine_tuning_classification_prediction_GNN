@@ -93,3 +93,54 @@ else:
 
     acc = engine.eval_predictor(model, val_ds)
     print(acc)
+
+
+
+
+
+"""
+# Crea modello MLP 1
+gat = model.GAT()
+mlp_1 = model.MLP()
+#Gat e mlp randomly initialized
+model_1 = GAT_MLP(gat, mlp)
+
+# Crea loss e optimizer che ottimizzi tutti i parametri del modello
+loss = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim(model_1.parameters())
+# Allenamento classificazione (train_classifier)
+engine.train(model_1,...)
+
+################## FINE ALLENAMENTO 1 CLASSIFICAZIONE
+
+mlp_2 = model.MLP()
+# Riciclando gat precendente => Non vuoi che i pesi inizializzati random dell'MLP vadano a cambiare erroneamente
+# I pesi della GAT
+# mlp_2 Randomly init
+model_2 = GAT_MLP(gat, mlp_2)
+
+loss = torch.nn.BCEWithLogitsLoss()
+# Per le prime epoche_totali / 2 (numero a caso) ==> allenare e settare i pesi della MLP
+optimizer = torch.optim(mlp_2.parameters(), ...)
+engine.train_link_prediction(model_2, optimizer, epochs=EPOCHE TOTALI / 2) 
+
+# Una volta che i pesi della MLP sono stati settati correttamente, fai il fine-tuning della rete intera
+optimizer = torch.optim(model_2.parameters(),...)
+engine.train_link_prediction(model_2, optimizer, epochs=RESTANTI EPOCHE PER RAGGIUNGERE IL TOTALE)
+
+################### FINE ALLENAMENTO 2
+
+# Si riutilizza model_1 (siccome GAT ha i pesi aggiornati) per fare la classificazione
+# Fare comunque qualche epoca di fine tuning per avere poi i risultati (fare Copia incolla)
+
+# Oppure creare una nuova MLP e fare come si era fatto con la seconda iterazione della link prediction
+# prima fine tuning solo MLP e poi allenare MLP + GAT
+
+"""
+
+# Embedding size
+# hidden size (MLP)
+# Lr (Dai paper)
+# Hidden channels delle reti GNN (Dai paper)
+# Dropout (?)
+# Epoche
