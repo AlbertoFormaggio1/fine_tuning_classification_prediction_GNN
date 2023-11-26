@@ -147,4 +147,3 @@ class GCN_MLP(LinkPredictor):
     def forward(self, x, edge_index):
         x = self.gcn(x, edge_index)
         return self.mlp(x)
-

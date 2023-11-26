@@ -88,12 +88,6 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
           opt: torch.optim.Optimizer, epochs: int):
     """
     This function trains a link predictor model
-    :param model:
-    :param train_ds:
-    :param loss_fn:
-    :param opt:
-    :param epochs:
-    :return:
     """
 
     for _ in tqdm(range(epochs)):
@@ -140,5 +134,7 @@ def eval_predictor(model, data):
     z = model(data.x, data.edge_index)  # Compute the embeddings
     # Perform the decoding, flatten it by using view(-1) and then compute the confidence with the sigmoid activation function
     out = model.decode(z, data.edge_label_index).view(-1).sigmoid()
+    # Accuracy for link prediction
+    acc = torch.sum(data.edge_label.cpu() == torch.round(out.cpu()), dtype=torch.float) / out.shape[0]
     # Compute the AUC score
     return roc_auc_score(data.edge_label.cpu().numpy(), out.cpu().numpy())
