@@ -7,7 +7,11 @@ from torch_geometric.nn import SAGEConv
 
 import model
 
+
+
 """
+************************************ BASE CLASSES ************************************
+
 We instantiate the models starting from the Link predictor, which is already providing the functions to compute the similarities 
 between embeddings. This will be the same for every model, they will inherit this methods.
 """
@@ -28,6 +32,9 @@ class LinkPredictor(nn.Module):
         raise NotImplementedError
 
 
+"""
+************************************ MODEL CLASSES ************************************
+"""
 ########## QUESTION: SHOULD DROPOUT BE ADDED?
 ########## https://dl.acm.org/doi/pdf/10.1145/3487553.3524725
 class MLP(nn.Module):
@@ -106,6 +113,9 @@ class Graph_SAGE(LinkPredictor):
         x = self.sage2(x, edge_index)
         return x
 
+"""
+************************************ MLP CLASSES ************************************
+"""
 
 class SAGE_MLP(LinkPredictor):
     def __init__(self, sage, mlp):
