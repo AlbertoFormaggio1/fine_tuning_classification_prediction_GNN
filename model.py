@@ -1,13 +1,8 @@
 import torch.nn as nn
-from torch_geometric.nn import GCNConv
-from torch_geometric.nn import GATv2Conv
 from torch.functional import F
-from torch_geometric.loader import NeighborLoader
+from torch_geometric.nn import GATv2Conv
+from torch_geometric.nn import GCNConv
 from torch_geometric.nn import SAGEConv
-
-import model
-
-
 
 """
 ************************************ BASE CLASSES ************************************
@@ -17,7 +12,7 @@ between embeddings. This will be the same for every model, they will inherit thi
 """
 class LinkPredictor(nn.Module):
     def decode(self, embeddings, edge_label_index):
-        # Computing similarity between embeddings in the training set + negative examples returned by the function for sampling
+        # Computing cosine similarity between embeddings in the training set + negative examples returned by the function for sampling
         simil = embeddings[edge_label_index[0]] * embeddings[edge_label_index[1]]
         return simil.sum(dim=-1)
 
@@ -125,7 +120,6 @@ class SAGE_MLP(LinkPredictor):
         self.mlp = mlp
 
     def forward(self, x, edge_index):
-        #super().__init__()
         x = self.sage(x, edge_index)
         x = self.mlp(x)
         return x

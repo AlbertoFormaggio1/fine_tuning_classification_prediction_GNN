@@ -1,10 +1,11 @@
-import torch
 import os
-import json
-import load_dataset
-import engine
-import model
+
+import torch
 import torch_geometric.transforms as T
+
+import engine
+import load_dataset
+import model
 
 # select the device on which you should run the computation
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -16,14 +17,14 @@ dataset_name = "cora"
 
 #GCN
 parameters_GCN = {
-    "embedding_size" : 5,
+    "embedding_size": 64,
     "hidden_channels" : 16,
-    "dropout" : 0.5
+    "dropout": 0.2
 }
 
 #GAT
 parameters_GAT = {
-    "embedding_size" : 5,
+    "embedding_size": 64,
     "hidden_channels" : 16,
     "heads" : 8,
     "dropout" : 0.6
@@ -31,15 +32,15 @@ parameters_GAT = {
 
 # SAGE
 parameters_SAGE = {
-    "embedding_size" : 5,
+    "embedding_size": 64,
     "hidden_size" : 512,
-    "dropout" : 0.5
+    "dropout": 0.2
 }
 
 epochs_classification1 = 10
 epochs_linkpred = 10
 net_freezed_linkpred = 0.5
-epochs_classification2 = 10
+epochs_classification2 = 100
 net_freezed_classification2 = 0.5
 
 # aggiungere anche lr e decay rate e hidden_sizes?
@@ -98,7 +99,7 @@ linkpred_dataset = linkpred_datasets['cora']
 # Get the 3 splits
 train_ds, val_ds, test_ds = linkpred_dataset[0]
 
-for net in ["GAT", "GCN", "SAGE"]:
+for net in ["SAGE"]:
 
     if net == "GCN":
         parameters = parameters_GCN
@@ -106,7 +107,8 @@ for net in ["GAT", "GCN", "SAGE"]:
         parameters = parameters_GAT
     else:
         parameters = parameters_SAGE
-    
+
+    batch_generation = net == "SAGE"
 
     # ************************************ CLASSIFICATION 1 ************************************
 
@@ -127,7 +129,7 @@ for net in ["GAT", "GCN", "SAGE"]:
     
     input_size = parameters["embedding_size"]
     output_size = classification_dataset.num_classes
-    hidden_sizes = [5]
+    hidden_sizes = [20]
     dropout = 0 # droupout forse meglio toglierlo nel MLP
     mlp_classification1 = model.MLP(input_size=input_size, num_classes=output_size, hidden_sizes=hidden_sizes, dropout=dropout)
 
@@ -146,7 +148,8 @@ for net in ["GAT", "GCN", "SAGE"]:
 
     # run the training
     epochs = epochs_classification1
-    results = engine.train(model_classification1, classification_dataset.data, classification_dataset.data, criterion, optimizer, epochs, False)
+    results = engine.train(model_classification1, classification_dataset.data, classification_dataset.data, criterion,
+                           optimizer, epochs, batch_generation)
 
 
     # ************************************ LINK PREDICTION ************************************
@@ -169,11 +172,11 @@ for net in ["GAT", "GCN", "SAGE"]:
 
     optimizer = torch.optim.Adam(mlp_linkpred.parameters(), lr=0.01, weight_decay=5e-4)
     epochs = int(epochs_linkpred*net_freezed_linkpred)
-    engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs)
+    engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs, batch_generation)
 
     optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=0.01, weight_decay=5e-4)
     epochs = epochs_linkpred - epochs
-    engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs)
+    engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs, batch_generation)
 
 
     # ************************************ CLASSIFICATION 2 ************************************
@@ -195,11 +198,13 @@ for net in ["GAT", "GCN", "SAGE"]:
 
     optimizer = torch.optim.Adam(mlp_classification2.parameters(), lr=0.01, weight_decay=5e-4)
     epochs = int(epochs_classification2*net_freezed_classification2)
-    results = engine.train(model_classification2, classification_dataset.data, classification_dataset.data, criterion, optimizer, epochs, False)
+    results = engine.train(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
+                           optimizer, epochs, batch_generation)
 
     optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=0.01, weight_decay=5e-4)
     epochs = epochs_classification2 - epochs
-    results = engine.train(model_classification2, classification_dataset.data, classification_dataset.data, criterion, optimizer, epochs, False)
+    results = engine.train(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
+                           optimizer, epochs, batch_generation)
     
 
     # ************************************ SAVING RESULTS ************************************

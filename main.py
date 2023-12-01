@@ -1,9 +1,9 @@
 import torch
-import os
-import load_dataset
-import engine
-import model
 import torch_geometric.transforms as T
+
+import engine
+import load_dataset
+import model
 
 # select the device on which you should run the computation
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -82,7 +82,7 @@ else:
     # Get the 3 splits
     train_ds, val_ds, test_ds = dataset[0]
 
-    model = model.GCN(dataset.num_features, dataset.num_classes)
+    model = model.Graph_SAGE(dataset.num_features, dataset.num_classes)
 
     # Define loss criterion => Binary Cross Entropy for link prediction
     # We need to predict 1 if the link is present, 0 otherwise
