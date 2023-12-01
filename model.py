@@ -32,9 +32,6 @@ class LinkPredictor(nn.Module):
         raise NotImplementedError
 
 
-"""
-************************************ MODEL CLASSES ************************************
-"""
 ########## QUESTION: SHOULD DROPOUT BE ADDED?
 ########## https://dl.acm.org/doi/pdf/10.1145/3487553.3524725
 class MLP(nn.Module):
@@ -48,11 +45,15 @@ class MLP(nn.Module):
             layers.append(nn.Dropout(p=dropout))    # Can dropout be omitted? Or which is the best value for it?
 
         layers.append(nn.Linear(in_features=hidden_sizes[-1], out_features=num_classes))
-        self.MLP = nn.Sequential(layers)
+        self.MLP = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.MLP(x)
 
+
+"""
+************************************ MODEL CLASSES ************************************
+"""
 # Check the parameters of GCN to find the best configuration.
 # https://arxiv.org/abs/1609.02907
 class GCN(LinkPredictor):
@@ -96,14 +97,14 @@ class GAT(LinkPredictor):
 
 # https://arxiv.org/pdf/1706.02216v4.pdf
 class Graph_SAGE(LinkPredictor):
-    def __init__(self, input_size: int, embedding_dim: int, hidden_size: int = 512, dropout: float = 0.5):
+    def __init__(self, input_size: int, embedding_size: int, hidden_size: int = 512, dropout: float = 0.5):
         # Using 2 layers has led to the best results in the original paper.
         # furthermore, they reported that max and LSTM were the best and similar in terms of accuracy.
         # However, pooling was a bit faster than LSTM.
         # We consider as default hidden_size the one for the "small" pool network
         super().__init__()
         self.sage1 = SAGEConv(input_size, hidden_size, aggr='max')
-        self.sage2 = SAGEConv(hidden_size, embedding_dim, aggr='max')
+        self.sage2 = SAGEConv(hidden_size, embedding_size, aggr='max')
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, edge_index):
@@ -124,7 +125,7 @@ class SAGE_MLP(LinkPredictor):
         self.mlp = mlp
 
     def forward(self, x, edge_index):
-        super().__init__()
+        #super().__init__()
         x = self.sage(x, edge_index)
         x = self.mlp(x)
         return x
