@@ -1,6 +1,7 @@
 import torch
 from sklearn.metrics import roc_auc_score
-from torch_geometric.loader import NeighborLoader
+from torch_geometric.loader import LinkNeighborLoader, NeighborLoader
+from torch_geometric.sampler import NegativeSampling
 from torch_geometric.utils import negative_sampling
 from tqdm.auto import tqdm
 
@@ -96,45 +97,57 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
     if batch_generation:
         # We keep the 25 neighbors of each node and then 10 neighbors for each of them
         # They trained on 10 epochs for the fully supervised sampling
-        train_batches = NeighborLoader(train_ds, [25, 10], batch_size=512, input_nodes=train_ds.train_mask,
-                                       shuffle=True)
+        train_batches = LinkNeighborLoader(train_ds, [25, 10], neg_sampling=NegativeSampling('binary'),
+                                           batch_size=128,
+                                           edge_label_index=train_ds.edge_label_index,
+                                           edge_label=train_ds.edge_label,
+                                           shuffle=True)
+
+        for _ in tqdm(range(epochs)):
+            for batch in train_batches:
+                model.train()  # Set the model in training phase
+                opt.zero_grad()
+                # Computing first the embeddings with message passing on the edges that are already existing
+                # in the graph
+
+                z = model(batch.x, batch.edge_index)
+
+                out = model.decode(z, batch.edge_label_index).view(-1)
+                loss = loss_fn(out, batch.edge_label)
+                loss.backward()
+                opt.step()
     else:
         train_batches = [train_ds]
 
-    for _ in tqdm(range(epochs)):
-        for batch in train_batches:
-            model.train()  # Set the model in training phase
-            opt.zero_grad()
-            # Computing first the embeddings with message passing on the edges that are already existing
-            # in the graph
-            z = model(batch.x, batch.edge_index)
+        for _ in tqdm(range(epochs)):
+            for batch in train_batches:
+                model.train()  # Set the model in training phase
+                opt.zero_grad()
+                # Computing first the embeddings with message passing on the edges that are already existing
+                # in the graph
+                z = model(batch.x, batch.edge_index)
 
-            # For every epoch perform a round of negative sampling.
-            # This array will return edges not already present in edge_index.
-            # The number of nodes is given by num_nodes
-            # The number of negative edges to generate is the same as the number of edges in the original graph, this way the predictor is unbiased
-            neg_edge_index = negative_sampling(
-                edge_index=batch.edge_index, num_nodes=batch.num_nodes,
-                num_neg_samples=batch.edge_label_index.size(1), method='sparse')
+                # For every epoch perform a round of negative sampling.
+                # This array will return edges not already present in edge_index.
+                # The number of nodes is given by num_nodes
+                # The number of negative edges to generate is the same as the number of edges in the original graph, this way the predictor is unbiased
+                neg_edge_index = negative_sampling(
+                    edge_index=batch.edge_index, num_nodes=batch.num_nodes,
+                    num_neg_samples=batch.edge_label_index.size(1), method='sparse')
 
-            print(torch.max(batch.edge_label_index))
+                # The edge_label for the edges that are already in the graph will be 1
+                # The edge_label for the edges we just created instead will be 0
 
-            # The edge_label for the edges that are already in the graph will be 1
-            # The edge_label for the edges we just created instead will be 0
+                # concatenating on the last dimensions since we're adding more edges
+                edge_label_index = torch.cat([batch.edge_label_index, neg_edge_index], dim=-1)
+                # Concatenating along the 1st (and only dimension) the label of the negative edges (thus, 0)
+                edge_label = torch.cat([torch.ones(batch.edge_index.size(1)),
+                                        batch.edge_label.new_zeros(neg_edge_index.size(1))], dim=0)
 
-            # concatenating on the last dimensions since we're adding more edges
-            edge_label_index = torch.cat([batch.edge_label_index, neg_edge_index], dim=-1)
-            # Concatenating along the 1st (and only dimension) the label of the negative edges (thus, 0)
-            edge_label = torch.cat([torch.ones(batch.edge_index.size(1)),
-                                    batch.edge_label.new_zeros(neg_edge_index.size(1))], dim=0)
-
-            print(edge_label_index.shape)
-            print(batch.x.shape)
-            print(z.shape)
-            out = model.decode(z, edge_label_index).view(-1)
-            loss = loss_fn(out, edge_label)
-            loss.backward()
-            opt.step()
+                out = model.decode(z, edge_label_index).view(-1)
+                loss = loss_fn(out, edge_label)
+                loss.backward()
+                opt.step()
 
     return loss.item()
 

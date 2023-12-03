@@ -18,16 +18,16 @@ dataset_name = "cora"
 #GCN
 parameters_GCN = {
     "embedding_size": 64,
-    "hidden_channels" : 16,
+    "hidden_channels": 16,
     "dropout": 0.2
 }
 
 #GAT
 parameters_GAT = {
     "embedding_size": 64,
-    "hidden_channels" : 16,
-    "heads" : 8,
-    "dropout" : 0.6
+    "hidden_channels": 16,
+    "heads": 8,
+    "dropout": 0.6
 }
 
 # SAGE
@@ -37,7 +37,7 @@ parameters_SAGE = {
     "dropout": 0.2
 }
 
-epochs_classification1 = 10
+epochs_classification1 = 1
 epochs_linkpred = 10
 net_freezed_linkpred = 0.5
 epochs_classification2 = 100
@@ -155,7 +155,7 @@ for net in ["SAGE"]:
     # ************************************ LINK PREDICTION ************************************
 
     input_size = parameters["embedding_size"]
-    output_size = linkpred_dataset.num_classes
+    output_size = linkpred_dataset.num_classes  # Non è legato al numero di classi
     hidden_sizes = [5]
     dropout = 0 # droupout forse meglio toglierlo negli MLP
     mlp_linkpred = model.MLP(input_size=input_size, num_classes=output_size, hidden_sizes=hidden_sizes, dropout=dropout)
