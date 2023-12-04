@@ -161,7 +161,7 @@ def eval_predictor(model: model.LinkPredictor, loss_fn, ds, batch_generation: bo
     val_acc /= batch_num
     val_loss /= batch_num
 
-    # Compute the AUC score
+    # Compute the accuracy score
     return val_loss, val_acc
 
 

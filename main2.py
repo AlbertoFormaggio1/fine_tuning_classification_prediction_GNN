@@ -99,7 +99,7 @@ linkpred_dataset = linkpred_datasets['cora']
 # Get the 3 splits
 train_ds, val_ds, test_ds = linkpred_dataset[0]
 
-for net in ["SAGE"]:
+for net in ["GCN"]:
 
     if net == "GCN":
         parameters = parameters_GCN
