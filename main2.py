@@ -32,15 +32,15 @@ parameters_GAT = {
 
 # SAGE
 parameters_SAGE = {
-    "embedding_size": 64,
-    "hidden_size" : 512,
+    "embedding_size": 32,
+    "hidden_size": 64,
     "dropout": 0.2
 }
 
-epochs_classification1 = 1
-epochs_linkpred = 10
+epochs_classification1 = 20
+epochs_linkpred = 20
 net_freezed_linkpred = 0.5
-epochs_classification2 = 100
+epochs_classification2 = 20
 net_freezed_classification2 = 0.5
 
 # aggiungere anche lr e decay rate e hidden_sizes?

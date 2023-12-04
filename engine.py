@@ -1,13 +1,14 @@
 import torch
-from sklearn.metrics import roc_auc_score
 from torch_geometric.loader import LinkNeighborLoader, NeighborLoader
 from torch_geometric.sampler import NegativeSampling
 from torch_geometric.utils import negative_sampling
 from tqdm.auto import tqdm
 
+import model
+
 
 def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
-          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool = False):
+          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool):
     results = {"train_loss": [],
                "train_acc": [],
                "val_loss": [],
@@ -20,7 +21,8 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
     if batch_generation:
         # We keep the 25 neighbors of each node and then 10 neighbors for each of them
         # They trained on 10 epochs for the fully supervised sampling
-        train_batches = NeighborLoader(train_ds, [25, 10], batch_size=512, input_nodes=train_ds.train_mask, shuffle=True)
+        train_batches = NeighborLoader(train_ds, [25, 10], batch_size=128, input_nodes=train_ds.train_mask,
+                                       shuffle=True)
     else:
         train_batches = [train_ds]
 
@@ -49,25 +51,11 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
 
         # every 10 epochs see the improvement on the validation set
         if epoch % 10 == 0:
-            val_loss, val_acc = eval(model, loss_fn, val_ds, val_ds.val_mask)
+            val_loss, val_acc = eval_classifier(model, loss_fn, val_ds, True, batch_generation)
             results['val_loss'].append(val_loss)
             results['val_acc'].append(val_acc)
 
     return results
-
-def eval(model, loss_fn, ds, mask):
-    with torch.no_grad():
-        # Compute the response of the model
-        out = model(ds.x, ds.edge_index)
-        # Compute the loss function and with item() get the numerical value associated to it
-        loss = loss_fn(out[mask], ds.y[mask]).item()
-        # Compute the argmax over the outputs (you may apply softmax as well, but it's just a scaling)
-        cls = out.argmax(dim=-1)
-        # Compute the number of correctly classified samples
-        acc = torch.sum(cls[mask] == ds.y[mask]) / torch.sum(mask)
-
-    return loss, acc.item()
-
 
 def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
                opt: torch.optim.Optimizer):
@@ -117,53 +105,110 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
                 loss.backward()
                 opt.step()
     else:
-        train_batches = [train_ds]
-
         for _ in tqdm(range(epochs)):
-            for batch in train_batches:
-                model.train()  # Set the model in training phase
-                opt.zero_grad()
-                # Computing first the embeddings with message passing on the edges that are already existing
-                # in the graph
-                z = model(batch.x, batch.edge_index)
+            model.train()  # Set the model in training phase
+            opt.zero_grad()
+            # Computing first the embeddings with message passing on the edges that are already existing
+            # in the graph
+            z = model(train_ds.x, train_ds.edge_index)
 
-                # For every epoch perform a round of negative sampling.
-                # This array will return edges not already present in edge_index.
-                # The number of nodes is given by num_nodes
-                # The number of negative edges to generate is the same as the number of edges in the original graph, this way the predictor is unbiased
-                neg_edge_index = negative_sampling(
-                    edge_index=batch.edge_index, num_nodes=batch.num_nodes,
-                    num_neg_samples=batch.edge_label_index.size(1), method='sparse')
+            # For every epoch perform a round of negative sampling.
+            # This array will return edges not already present in edge_index.
+            # The number of nodes is given by num_nodes
+            # The number of negative edges to generate is the same as the number of edges in the original graph, this way the predictor is unbiased
+            neg_edge_index = negative_sampling(
+                edge_index=train_ds.edge_index, num_nodes=train_ds.num_nodes,
+                num_neg_samples=train_ds.edge_label_index.size(1), method='sparse')
 
-                # The edge_label for the edges that are already in the graph will be 1
-                # The edge_label for the edges we just created instead will be 0
+            # The edge_label for the edges that are already in the graph will be 1
+            # The edge_label for the edges we just created instead will be 0
 
-                # concatenating on the last dimensions since we're adding more edges
-                edge_label_index = torch.cat([batch.edge_label_index, neg_edge_index], dim=-1)
-                # Concatenating along the 1st (and only dimension) the label of the negative edges (thus, 0)
-                edge_label = torch.cat([torch.ones(batch.edge_index.size(1)),
-                                        batch.edge_label.new_zeros(neg_edge_index.size(1))], dim=0)
+            # concatenating on the last dimensions since we're adding more edges
+            edge_label_index = torch.cat([train_ds.edge_label_index, neg_edge_index], dim=1)
+            # Concatenating along the 1st (and only dimension) the label of the negative edges (thus, 0)
+            edge_label = torch.cat([train_ds.edge_label,
+                                    train_ds.edge_label.new_zeros(neg_edge_index.size(1))], dim=0)
 
-                out = model.decode(z, edge_label_index).view(-1)
-                loss = loss_fn(out, edge_label)
-                loss.backward()
-                opt.step()
+            out = model.decode(z, edge_label_index).view(-1)
+            loss = loss_fn(out, edge_label)
+            loss.backward()
+            opt.step()
 
     return loss.item()
 
-"""
-************************            TO DO              ************************************* (or maybe not, see what's more clear and easy)
-This eval_predictor may be included into eval.
-The difference is the following: eval_predictor is computing the performance (AUC) of the link predictor
-eval instead computes the accuracy of the classifier
-"""
+
 @torch.no_grad()
-def eval_predictor(model, data):
-    model.eval()    # Set the model to evaluation stage
-    z = model(data.x, data.edge_index)  # Compute the embeddings
-    # Perform the decoding, flatten it by using view(-1) and then compute the confidence with the sigmoid activation function
-    out = model.decode(z, data.edge_label_index).view(-1).sigmoid()
-    # Accuracy for link prediction
-    acc = torch.sum(data.edge_label.cpu() == torch.round(out.cpu()), dtype=torch.float) / out.shape[0]
+def eval_predictor(model: model.LinkPredictor, loss_fn, data, batch_generation: bool):
+    model.eval()  # Set the model in evaluation stage
+
+    if batch_generation:
+        val_batches = LinkNeighborLoader(data=data, num_neighbors=[25, 10], edge_label_index=data.edge_label_index,
+                                         edge_label=data.edge_label, batch_size=3 * 128, shuffle=False)
+    else:
+        val_batches = [data]
+
+    val_acc, val_loss = .0, .0
+    batch_num = 0
+    for batch in val_batches:
+        z = model(batch.x, batch.edge_index)  # Compute the embeddings
+        # Perform the decoding, flatten it by using view(-1) and then compute the confidence with the sigmoid activation function
+        out = model.decode(z, batch.edge_label_index).view(-1).sigmoid()
+        # Accuracy for link prediction
+        val_acc += (torch.sum(batch.edge_label == torch.round(out))).item()
+        val_loss += loss_fn(out, batch.edge_label).item()
+
+        if batch_generation:
+            batch_num += batch.batch_size
+        else:
+            batch_num += out.shape[0]
+
+    val_acc /= batch_num
+    val_loss /= batch_num
+
     # Compute the AUC score
-    return (acc, roc_auc_score(data.edge_label.cpu().numpy(), out.cpu().numpy()))
+    return val_loss, val_acc
+
+
+@torch.no_grad()
+def eval_classifier(model, loss_fn, ds, is_validation, batch_generation):
+    model.eval()
+
+    if batch_generation:
+        if is_validation:
+            validation_batches = NeighborLoader(ds, [25, 10], batch_size=128, input_nodes=ds.val_mask, shuffle=False)
+        else:
+            validation_batches = NeighborLoader(ds, [25, 10], batch_size=128, input_nodes=ds.test_mask, shuffle=False)
+    else:
+        validation_batches = [ds]
+        if is_validation:
+            mask = ds.val_mask
+        else:
+            mask = ds.test_mask
+
+    eval_loss, eval_acc = .0, .0
+    batch_num = 0
+    for batch in validation_batches:
+        # Count the number of nodes in the current batch
+        if batch_generation:
+            if is_validation:
+                mask = batch.val_mask
+            else:
+                mask = batch.test_mask
+
+        # Compute the response of the model
+        out = model(batch.x, batch.edge_index)
+
+        batch_num += torch.sum(
+            mask).item()  # Number of values set to 1 in the mask: they are the samples used for computing the accuracy
+
+        # Compute the loss function and with item() get the numerical value associated to it
+        eval_loss += loss_fn(out[mask], batch.y[mask]).item()
+        # Compute the argmax over the outputs (you may apply softmax as well, but it's just a scaling)
+        cls = out.argmax(dim=-1)
+        # Compute the number of correctly classified samples
+        eval_acc += (torch.sum(cls[mask].eq(batch.y[mask]))).item()
+
+    eval_loss /= batch_num
+    eval_acc /= batch_num
+
+    return eval_loss, eval_acc
