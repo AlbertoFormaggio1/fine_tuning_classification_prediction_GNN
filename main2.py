@@ -178,6 +178,8 @@ for net in ["SAGE"]:
     epochs = epochs_linkpred - epochs
     engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs, batch_generation)
 
+    engine.eval_predictor(model_linkpred, criterion, val_ds, batch_generation)
+
 
     # ************************************ CLASSIFICATION 2 ************************************
 

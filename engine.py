@@ -138,14 +138,14 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
 
 
 @torch.no_grad()
-def eval_predictor(model: model.LinkPredictor, loss_fn, data, batch_generation: bool):
+def eval_predictor(model: model.LinkPredictor, loss_fn, ds, batch_generation: bool):
     model.eval()  # Set the model in evaluation stage
 
     if batch_generation:
-        val_batches = LinkNeighborLoader(data=data, num_neighbors=[25, 10], edge_label_index=data.edge_label_index,
-                                         edge_label=data.edge_label, batch_size=3 * 128, shuffle=False)
+        val_batches = LinkNeighborLoader(data=ds, num_neighbors=[25, 10], edge_label_index=ds.edge_label_index,
+                                         edge_label=ds.edge_label, batch_size=3 * 128, shuffle=False)
     else:
-        val_batches = [data]
+        val_batches = [ds]
 
     val_acc, val_loss = .0, .0
     batch_num = 0
@@ -156,11 +156,7 @@ def eval_predictor(model: model.LinkPredictor, loss_fn, data, batch_generation: 
         # Accuracy for link prediction
         val_acc += (torch.sum(batch.edge_label == torch.round(out))).item()
         val_loss += loss_fn(out, batch.edge_label).item()
-
-        if batch_generation:
-            batch_num += batch.batch_size
-        else:
-            batch_num += out.shape[0]
+        batch_num += out.shape[0]
 
     val_acc /= batch_num
     val_loss /= batch_num
@@ -175,6 +171,7 @@ def eval_classifier(model, loss_fn, ds, is_validation, batch_generation):
 
     if batch_generation:
         if is_validation:
+            # [25, 10] is the neighbors to keep at each hop defined in the original paper
             validation_batches = NeighborLoader(ds, [25, 10], batch_size=128, input_nodes=ds.val_mask, shuffle=False)
         else:
             validation_batches = NeighborLoader(ds, [25, 10], batch_size=128, input_nodes=ds.test_mask, shuffle=False)
