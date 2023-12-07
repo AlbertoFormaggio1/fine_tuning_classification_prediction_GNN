@@ -78,4 +78,4 @@ if __name__ == "__main__":
         params_dict = {}
 
     find_best_params(dataset_name, net_name, results_dict, params_dict, 3, print_output=True)
-    find_best_params(dataset_name, net_name, results_dict, params_dict, 5, print_output=False, save_output=True, file_name="cora_GCN_best_runs.txt")
+    # find_best_params(dataset_name, net_name, results_dict, params_dict, 5, print_output=False, save_output=True, file_name="cora_GCN_best_runs.txt")

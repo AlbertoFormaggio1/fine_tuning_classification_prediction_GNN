@@ -293,5 +293,5 @@ for net in nets:
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)
 
-    filename = dataset_name + "_best_runs.txt"
+    filename = dataset_name + "_" + net + "_best_runs.txt"
     get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, 5, print_output=False, save_output=True, file_name=filename)
