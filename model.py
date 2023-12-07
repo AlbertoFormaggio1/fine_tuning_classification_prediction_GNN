@@ -92,14 +92,14 @@ class GAT(LinkPredictor):
 
 # https://arxiv.org/pdf/1706.02216v4.pdf
 class Graph_SAGE(LinkPredictor):
-    def __init__(self, input_size: int, embedding_size: int, hidden_size: int = 512, dropout: float = 0.5):
+    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 512, dropout: float = 0.5):
         # Using 2 layers has led to the best results in the original paper.
         # furthermore, they reported that max and LSTM were the best and similar in terms of accuracy.
         # However, pooling was a bit faster than LSTM.
         # We consider as default hidden_size the one for the "small" pool network
         super().__init__()
-        self.sage1 = SAGEConv(input_size, hidden_size, aggr='max')
-        self.sage2 = SAGEConv(hidden_size, embedding_size, aggr='max')
+        self.sage1 = SAGEConv(input_size, hidden_channels, aggr='max')
+        self.sage2 = SAGEConv(hidden_channels, embedding_size, aggr='max')
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, edge_index):

@@ -3,12 +3,13 @@ from torch_geometric.loader import LinkNeighborLoader, NeighborLoader
 from torch_geometric.sampler import NegativeSampling
 from torch_geometric.utils import negative_sampling
 from tqdm.auto import tqdm
+from typing import List
 
 import model
 
 
-def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
-          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool):
+def train_classification(model, train_ds, val_ds, loss_fn: torch.nn.Module,
+          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool = False, num_batch_neighbors: List[int] = [25, 10]):
     results = {"train_loss": [],
                "train_acc": [],
                "val_loss": [],
@@ -21,7 +22,7 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
     if batch_generation:
         # We keep the 25 neighbors of each node and then 10 neighbors for each of them
         # They trained on 10 epochs for the fully supervised sampling
-        train_batches = NeighborLoader(train_ds, [25, 10], batch_size=128, input_nodes=train_ds.train_mask,
+        train_batches = NeighborLoader(train_ds, num_neighbors=num_batch_neighbors, batch_size=128, input_nodes=train_ds.train_mask,
                                        shuffle=True)
     else:
         train_batches = [train_ds]
@@ -46,12 +47,14 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
         train_loss /= batch_num
         train_acc /= batch_num
 
-        results['train_loss'].append(train_loss)
-        results['train_acc'].append(train_acc)
+        # results['train_loss'].append(train_loss)
+        # results['train_acc'].append(train_acc)
 
         # every 10 epochs see the improvement on the validation set
-        if epoch % 10 == 0:
+        if epoch % 20 == 0 or epoch == epochs-1:
             val_loss, val_acc = eval_classifier(model, loss_fn, val_ds, True, batch_generation)
+            results['train_loss'].append(train_loss)
+            results['train_acc'].append(train_acc)
             results['val_loss'].append(val_loss)
             results['val_acc'].append(val_acc)
 
@@ -75,7 +78,7 @@ def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
 
 
 def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
-                          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool = False):
+                          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool = False, num_batch_neighbors : List[int] = [25, 10]):
     """
     This function trains a link predictor model
     """
@@ -85,7 +88,7 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
     if batch_generation:
         # We keep the 25 neighbors of each node and then 10 neighbors for each of them
         # They trained on 10 epochs for the fully supervised sampling
-        train_batches = LinkNeighborLoader(train_ds, [25, 10], neg_sampling=NegativeSampling('binary'),
+        train_batches = LinkNeighborLoader(train_ds, num_neighbors=num_batch_neighbors, neg_sampling=NegativeSampling('binary'),
                                            batch_size=128,
                                            edge_label_index=train_ds.edge_label_index,
                                            edge_label=train_ds.edge_label,

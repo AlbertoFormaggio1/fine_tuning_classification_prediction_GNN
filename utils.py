@@ -19,6 +19,7 @@ def visualize(h, color):
 # takes as input a dictionary made of key:lists, and the output is a list made of dictionary with all possible combinations
 # ex. input = {'A':[0,1] 'B':[2,3]} --> output = [{'A':0, 'B':2}, {'A':1, 'B':2}, {'A':0, 'B':3}, {'A':1, 'B':3}]
 def generate_combinations(input_dict):
+    
     keys = list(input_dict.keys())
     lists = [input_dict[key] for key in keys]
     counters = [0] * len(lists)
