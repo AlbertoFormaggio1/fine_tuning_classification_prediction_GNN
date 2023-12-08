@@ -164,6 +164,7 @@ for net in nets:
         else:
             model_classification1 = model.SAGE_MLP(network, mlp_classification1)
         
+        
 
         # define the loss function and the optimizer. The learning rate is found on papers, same goes for the learning rate decay
         # and the weight decay
@@ -183,7 +184,7 @@ for net in nets:
         # ************************************ LINK PREDICTION ************************************
 
         input_size_mlp = params["embedding_size"]
-        output_size_mlp = linkpred_dataset.num_classes  # Non è legato al numero di classi ## e allora che mettiamo ? 
+        output_size_mlp = params["link_pred_out_size_mlp"]  # Non è legato al numero di classi ## e allora che mettiamo ? 
         hidden_sizes_mlp = params["hidden_sizes_mlp_link_pred"]
         dropout_mlp = params["dropout_mlp_link_pred"] 
         mlp_linkpred = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)

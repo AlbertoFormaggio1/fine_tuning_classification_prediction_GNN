@@ -10,7 +10,7 @@ parameters_grid_GCN = {
     "dropout_mlp_class1": [0.2],
     "dropout_mlp_link_pred": [0.2],
     "dropout_mlp_class2": [0.2],
-
+    "link_pred_out_size_mlp" : [16],
     "epochs_classification1": [50, 75],
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
@@ -28,7 +28,7 @@ parameters_GCN = {
     "dropout_mlp_class1": 0.3,
     "dropout_mlp_link_pred": 0,
     "dropout_mlp_class2": 0.3,
-
+    "link_pred_out_size_mlp" : 16,
     "epochs_classification1": 75,
     "epochs_linkpred": 50,
     "net_freezed_linkpred": 0.6,
@@ -48,7 +48,7 @@ parameters_grid_GAT = {
     "dropout_mlp_class1": [0],
     "dropout_mlp_link_pred": [0],
     "dropout_mlp_class2": [0],
-
+    "link_pred_out_size_mlp" : [16],
     "epochs_classification1": [50, 100],
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
@@ -67,7 +67,7 @@ parameters_GAT = {
     "dropout_mlp_class1": 0,
     "dropout_mlp_link_pred": 0,
     "dropout_mlp_class2": 0,
-
+    "link_pred_out_size_mlp" : 16,
     "epochs_classification1": 100,
     "epochs_linkpred": 50,
     "net_freezed_linkpred": 0.6,
@@ -87,14 +87,13 @@ parameters_grid_SAGE = {
     "dropout_mlp_link_pred": [0],
     "dropout_mlp_class2": [0],
     "num_batch_neighbors": [[10, 4], [15, 6]],
-
+    "link_pred_out_size_mlp" : [16],
     "epochs_classification1": [50, 100],
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
     "epochs_classification2": [25, 50],
     "net_freezed_classification2": [0.4, 0.6]
 }
-
 
 parameters_SAGE = {
     "embedding_size": 32,
@@ -107,7 +106,7 @@ parameters_SAGE = {
     "dropout_mlp_link_pred": 0,
     "dropout_mlp_class2": 0,
     "num_batch_neighbors": [10, 4],
-
+    "link_pred_out_size_mlp" : 16,
     "epochs_classification1": 100,
     "epochs_linkpred": 50,
     "net_freezed_linkpred": 0.6,
