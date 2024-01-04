@@ -1,0 +1,1 @@
+random state per evitare alte performance a culo
