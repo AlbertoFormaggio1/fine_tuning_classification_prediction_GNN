@@ -3,6 +3,9 @@ import json
 
 import torch
 import torch_geometric.transforms as T
+from torch.utils.tensorboard import SummaryWriter
+import datetime
+import re
 
 import engine
 import load_dataset
@@ -11,16 +14,18 @@ import utils
 import parameters
 import get_best_params
 
+random_seed = 42
+torch.manual_seed(random_seed)
+torch.cuda.manual_seed_all(random_seed)
+
 # select the device on which you should run the computation
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
 #************************************** COMMANDS ************************************
 
-use_grid_search = True #False
-dataset_name = "cora"   # cora - citeseer - pubmed
-nets = ["GCN"]          # GCN - GAT - SAGE
-
+use_grid_search = False #False
+dataset_name = "pubmed"   # cora - citeseer - pubmed
+nets = ["SAGE"]          # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -81,7 +86,7 @@ linkpred_datasets['cora'] = load_dataset.load_ds('Cora', transform_prediction)
 linkpred_datasets['citeseer'] = load_dataset.load_ds('CiteSeer', transform_prediction)
 linkpred_datasets['pubmed'] = load_dataset.load_ds('PubMed', transform_prediction)
 
-linkpred_dataset = linkpred_datasets['cora']
+linkpred_dataset = linkpred_datasets[dataset_name]
 # Get the 3 splits
 train_ds, val_ds, test_ds = linkpred_dataset[0]
 
@@ -105,23 +110,30 @@ for net in nets:
         params_dict = {}
 
     if net == "GCN":
-        if use_grid_search :
+        if use_grid_search:
             param_combinations = utils.generate_combinations(parameters_grid_GCN)
-        else :
+        else:
             param_combinations = [parameters_GCN]
     elif net == "GAT":
-        if use_grid_search :
+        if use_grid_search:
             param_combinations = utils.generate_combinations(parameters_grid_GAT)
-        else :
+        else:
             param_combinations = [parameters_GAT]
     else:
-        if use_grid_search :
+        if use_grid_search:
             param_combinations = utils.generate_combinations(parameters_grid_SAGE)
-        else :
+        else:
             param_combinations = [parameters_SAGE]
 
     i = 1
     for params in param_combinations:
+
+        logdir = os.path.join("logs", "{}-{}".format(
+            datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+            ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(params.items())))
+        ))
+
+        writer = SummaryWriter(log_dir=logdir)
 
         print("\n " + net + ", (iteration " + str(i) + " over " + str(len(param_combinations)) + ") - Testing parameters: ")
         i += 1
@@ -164,22 +176,25 @@ for net in nets:
         else:
             model_classification1 = model.SAGE_MLP(network, mlp_classification1)
         
-        
+        model_classification1 = model_classification1.to(device)
 
         # define the loss function and the optimizer. The learning rate is found on papers, same goes for the learning rate decay
         # and the weight decay
         criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion => CrossEntropyLoss in the case of classification
         optimizer = torch.optim.Adam(model_classification1.parameters(), lr=lr, weight_decay=weight_decay)
 
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class1', 'model_name': net, 'starting_epoch': 0}
+
         # run the training
         epochs = params["epochs_classification1"]
         results_class1 = engine.train_classification(model_classification1, classification_dataset.data, classification_dataset.data, criterion,
-                            optimizer, epochs, batch_generation, num_batch_neighbors)
+                            optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
 
         print("CLASSIFICATION 1 RESULTS")
         for k,v in results_class1.items():
             print(k + ":" + str(v[-1]))
         print()
+
 
         # ************************************ LINK PREDICTION ************************************
 
@@ -195,7 +210,8 @@ for net in nets:
             model_linkpred = model.GAT_MLP(network, mlp_linkpred)
         else:
             model_linkpred = model.SAGE_MLP(network, mlp_linkpred)
-        
+
+        model_linkpred = model_linkpred.to(device)
 
         criterion = torch.nn.BCEWithLogitsLoss()
 
@@ -203,16 +219,15 @@ for net in nets:
         epochs_linkpred = params["epochs_linkpred"]
         net_freezed_linkpred = params["net_freezed_linkpred"]
 
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net, 'starting_epoch': epochs}
+
         optimizer = torch.optim.Adam(mlp_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = int(epochs_linkpred*net_freezed_linkpred)
-        engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs, batch_generation, num_batch_neighbors)
+        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
 
         optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = epochs_linkpred - epochs
-        engine.train_link_prediction(model_linkpred, train_ds, criterion, optimizer, epochs, batch_generation, num_batch_neighbors)
-
-        engine.eval_predictor(model_linkpred, criterion, val_ds, batch_generation)
-
+        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
 
         # ************************************ CLASSIFICATION 2 ************************************
 
@@ -229,26 +244,30 @@ for net in nets:
         else:
             model_classification2 = model.SAGE_MLP(network, mlp_classification2)
 
+        model_classification2 = model_classification2.to(device)
+
         criterion = torch.nn.CrossEntropyLoss()
 
         # run the training
         epochs_classification2 = params["epochs_classification2"]
         net_freezed_classification2 = params["net_freezed_classification2"]
 
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net, 'starting_epoch': epochs + epochs_linkpred}
+
         optimizer = torch.optim.Adam(mlp_classification2.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = int(epochs_classification2*net_freezed_classification2)
         results_class2a = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
-                            optimizer, epochs, batch_generation, num_batch_neighbors)
+                            optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
         
         print("CLASSIFICATION 2a RESULTS")
-        for k,v in results_class2a.items():
+        for k, v in results_class2a.items():
             print(k + ":" + str(v[-1]))
         print()
 
         optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = epochs_classification2 - epochs
         results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
-                            optimizer, epochs, batch_generation, num_batch_neighbors)
+                            optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
 
         print("CLASSIFICATION 2b RESULTS")
         for k,v in results_class2b.items():
