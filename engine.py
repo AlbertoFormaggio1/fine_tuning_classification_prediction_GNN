@@ -3,12 +3,13 @@ from torch_geometric.loader import LinkNeighborLoader, NeighborLoader
 from torch_geometric.sampler import NegativeSampling
 from torch_geometric.utils import negative_sampling
 from tqdm.auto import tqdm
+from typing import List
 
 import model
 
 
-def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
-          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool):
+def train_classification(model, train_ds, val_ds, loss_fn: torch.nn.Module,
+          opt: torch.optim.Optimizer, epochs: int, writer, writer_info, device, batch_generation: bool = False, num_batch_neighbors: List[int] = [25, 10]):
     results = {"train_loss": [],
                "train_acc": [],
                "val_loss": [],
@@ -21,7 +22,7 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
     if batch_generation:
         # We keep the 25 neighbors of each node and then 10 neighbors for each of them
         # They trained on 10 epochs for the fully supervised sampling
-        train_batches = NeighborLoader(train_ds, [25, 10], batch_size=128, input_nodes=train_ds.train_mask,
+        train_batches = NeighborLoader(train_ds, num_neighbors=num_batch_neighbors, batch_size=128, input_nodes=train_ds.train_mask,
                                        shuffle=True)
     else:
         train_batches = [train_ds]
@@ -30,9 +31,14 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
         train_loss, train_acc = .0, .0
         batch_num = 0
         for batch in train_batches:
+            batch = batch.to(device)
             cur_train_loss, cur_train_acc = train_step(model=model, ds=batch, loss_fn=loss_fn, opt=opt)
-            # Otherwise, we sum the values to 1 in the training mask (training mask has a 1 for every node to consider in the training set)
-            batch_size = torch.sum(batch.train_mask).item()
+            if batch_generation:
+                # If we generated batches, than we get the size by doing batch.batch_size
+                batch_size = batch.batch_size
+            else:
+                # Otherwise, we sum the values to 1 in the training mask (training mask has a 1 for every node to consider in the training set)
+                batch_size = torch.sum(batch.train_mask).item()
             batch_num += batch_size
             # Increase the loss and the accuracy propotionally to the size of the batch
             train_loss += cur_train_loss * float(batch_size)
@@ -42,17 +48,24 @@ def train(model, train_ds, val_ds, loss_fn: torch.nn.Module,
         train_loss /= batch_num
         train_acc /= batch_num
 
-        results['train_loss'].append(train_loss)
-        results['train_acc'].append(train_acc)
+        # results['train_loss'].append(train_loss)
+        # results['train_acc'].append(train_acc)
 
         # every 10 epochs see the improvement on the validation set
-        if epoch % 20 == 0:
-            val_loss, val_acc = eval_classifier(model, loss_fn, val_ds, True, batch_generation)
+        if epoch % 5 == 0 or epoch == epochs-1:
+            val_loss, val_acc = eval_classifier(model, loss_fn, val_ds, True, batch_generation, device)
+            results['train_loss'].append(train_loss)
+            results['train_acc'].append(train_acc)
             results['val_loss'].append(val_loss)
             results['val_acc'].append(val_acc)
 
-    return results
+            for k in results.keys():
+                writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{writer_info["training_step"]}/{k}',
+                                  results[k][-1], epoch)
+                writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
+                                  epoch + writer_info["starting_epoch"])
 
+    return results
 
 def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
                opt: torch.optim.Optimizer):
@@ -71,25 +84,34 @@ def train_step(model: torch.nn.Module, ds, loss_fn: torch.nn.Module,
     return train_loss, train_acc.item()
 
 
-def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
-                          opt: torch.optim.Optimizer, epochs: int, batch_generation: bool = False):
+def train_link_prediction(model, train_ds, val_ds, loss_fn: torch.nn.Module,
+                          opt: torch.optim.Optimizer, epochs: int, writer, writer_info, device, batch_generation: bool = False,
+                          num_batch_neighbors: List[int] = [25, 10]):
     """
     This function trains a link predictor model
     """
+    results = {"train_loss": [],
+               "train_acc": [],
+               "val_loss": [],
+               "val_acc": []
+               }
 
     # GraphSAGE works with generation of batches where you only pick a subset of the original graph
     # The other networks instead don't need that
     if batch_generation:
         # We keep the 25 neighbors of each node and then 10 neighbors for each of them
         # They trained on 10 epochs for the fully supervised sampling
-        train_batches = LinkNeighborLoader(train_ds, [25, 10], neg_sampling=NegativeSampling('binary'),
+        train_batches = LinkNeighborLoader(train_ds, num_neighbors=num_batch_neighbors, neg_sampling=NegativeSampling('binary'),
                                            batch_size=128,
                                            edge_label_index=train_ds.edge_label_index,
                                            edge_label=train_ds.edge_label,
                                            shuffle=True)
 
-        for _ in tqdm(range(epochs)):
+        train_acc = train_loss = 0
+        samples_num = 0
+        for epoch in tqdm(range(epochs)):
             for batch in train_batches:
+                batch = batch.to(device)
                 model.train()  # Set the model in training phase
                 opt.zero_grad()
                 # Computing first the embeddings with message passing on the edges that are already existing
@@ -99,10 +121,32 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
 
                 out = model.decode(z, batch.edge_label_index).view(-1)
                 loss = loss_fn(out, batch.edge_label)
+
+                train_acc += (torch.sum(batch.edge_label == torch.round(out.sigmoid()))).item() * float(out.shape[0])
+                train_loss += loss.item() * float(out.shape[0])
+                samples_num += out.shape[0]
+
                 loss.backward()
                 opt.step()
+
+            train_acc /= samples_num
+            train_loss /= samples_num
+
+            val_loss, val_acc = eval_predictor(model, loss_fn, val_ds, batch_generation, device)
+
+            results['val_loss'].append(val_loss)
+            results['val_acc'].append(val_acc)
+            results['train_loss'].append(train_loss)
+            results['train_acc'].append(train_acc)
+
+            for k in results.keys():
+                writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{writer_info["training_step"]}/{k}',
+                                  results[k][-1], epoch)
+                writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
+                                  epoch + writer_info["starting_epoch"])
+
     else:
-        for _ in tqdm(range(epochs)):
+        for epoch in tqdm(range(epochs)):
             model.train()  # Set the model in training phase
             opt.zero_grad()
             # Computing first the embeddings with message passing on the edges that are already existing
@@ -131,11 +175,29 @@ def train_link_prediction(model, train_ds, loss_fn: torch.nn.Module,
             loss.backward()
             opt.step()
 
-    return loss.item()
+            train_acc = (torch.sum(edge_label == torch.round(out.sigmoid()))).item() / edge_label.shape[0]
+            train_loss = loss.item()
+
+            val_loss, val_acc = eval_predictor(model, loss_fn, val_ds, batch_generation)
+
+            results['val_loss'].append(val_loss)
+            results['val_acc'].append(val_acc)
+            results['train_loss'].append(train_loss)
+            results['train_acc'].append(train_acc)
+
+            for k in results.keys():
+                writer.add_scalar(
+                    f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{writer_info["training_step"]}/{k}',
+                    results[k][-1], epoch)
+                writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
+                                  epoch + writer_info["starting_epoch"])
+
+    # dovrebbe diventare "return results"
+    return val_loss
 
 
 @torch.no_grad()
-def eval_predictor(model: model.LinkPredictor, loss_fn, ds, batch_generation: bool):
+def eval_predictor(model: model.LinkPredictor, loss_fn, ds, batch_generation: bool, device):
     model.eval()  # Set the model in evaluation stage
 
     if batch_generation:
@@ -147,6 +209,7 @@ def eval_predictor(model: model.LinkPredictor, loss_fn, ds, batch_generation: bo
     val_acc, val_loss = .0, .0
     batch_num = 0
     for batch in val_batches:
+        batch = batch.to(device)
         z = model(batch.x, batch.edge_index)  # Compute the embeddings
         # Perform the decoding, flatten it by using view(-1) and then compute the confidence with the sigmoid activation function
         out = model.decode(z, batch.edge_label_index).view(-1).sigmoid()
@@ -163,7 +226,7 @@ def eval_predictor(model: model.LinkPredictor, loss_fn, ds, batch_generation: bo
 
 
 @torch.no_grad()
-def eval_classifier(model, loss_fn, ds, is_validation, batch_generation):
+def eval_classifier(model, loss_fn, ds, is_validation, batch_generation, device):
     model.eval()
 
     if batch_generation:
@@ -182,6 +245,7 @@ def eval_classifier(model, loss_fn, ds, is_validation, batch_generation):
     eval_loss, eval_acc = .0, .0
     batch_num = 0
     for batch in validation_batches:
+        batch = batch.to(device)
         # Count the number of nodes in the current batch
         if batch_generation:
             if is_validation:

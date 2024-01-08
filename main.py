@@ -1,145 +1,317 @@
+import os
+import json
+
 import torch
 import torch_geometric.transforms as T
+from torch.utils.tensorboard import SummaryWriter
+import datetime
+import re
 
 import engine
 import load_dataset
 import model
+import utils
+import parameters
+import get_best_params
+
+random_seed = 42
+torch.manual_seed(random_seed)
+torch.cuda.manual_seed_all(random_seed)
 
 # select the device on which you should run the computation
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# Only for debugging purposes: set it to true if you want to test the classification
-# Set it to false if you want to test the link prediction
-classification = False
+#************************************** COMMANDS ************************************
 
-# TODO train different models and find the best parameters
-# TODO automatize everything (training on different datasets and models with a loop)
-# TODO display data appropriately and to understand better the results of a run (with a table for example from tabulate plugin)
-# this way you run the algorithm once and you get all the needed values in an understandable way
-# TODO start with seeing the effect of the MLP and how to tune it appropriately: more/less layers? what should be the embedding size?
-# what should be the hidden size?
-# TODO start applying the fine-tuning approach we described based on the results of previous steps
+use_grid_search = False #False
+dataset_name = "pubmed"   # cora - citeseer - pubmed
+nets = ["SAGE"]          # GCN - GAT - SAGE
 
-if classification:
+# ************************************ PARAMETERS ************************************
 
-    # Normalize the features and put it on the appropriate device
-    transform_classification = T.Compose([
-        T.NormalizeFeatures(),
-        T.ToDevice(device)
-    ])
+#GCN
+parameters_grid_GCN = parameters.parameters_grid_GCN
+parameters_GCN = parameters.parameters_GCN
 
-    datasets = {}
+#GAT
+parameters_grid_GAT = parameters.parameters_grid_GAT
+parameters_GAT = parameters.parameters_GAT
 
-    # Load the 3 datasets and apply the transform needed
-    datasets['cora'] = load_dataset.load_ds('Cora', transform_classification)
-    datasets['citeseer'] = load_dataset.load_ds('CiteSeer', transform_classification)
-    datasets['pubmed'] = load_dataset.load_ds('PubMed', transform_classification)
+# SAGE
+parameters_grid_SAGE = parameters.parameters_grid_SAGE
+parameters_SAGE = parameters.parameters_SAGE
 
-    # print the information for each dataset
-    for ds in datasets.values():
-        load_dataset.print_ds_info(ds)
-        print('\n#################################\n')
-
-    # Again, for debug purposes i extracted only one dataset. This should be transformed in a for loop done over all the
-    # possible values of the dictionary (in this case, the datasets)
-    dataset = datasets['cora']
-
-    # Create a model, also this can be transformed in a for loop that tries all possible architectures
-    model = model.GAT(dataset.num_features, dataset.num_classes)
-
-    # define the loss function and the optimizer. The learning rate is found on papers, same goes for the learning rate decay
-    # and the weight decay
-    criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion => CrossEntropyLoss in the case of classification
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-
-    # run the training
-    results = engine.train(model, dataset.data, dataset.data, criterion, optimizer, 10, False)
-
-    # print the results of the training (training loss, validation loss, training accuracy, validation accuracy)
-    for k, r in results.items():
-        print(k, r)
-
-else:
-    # Create the transform to apply the dataset
-    # In this case we also perform a random link split since we will use only a subset of the edges for the training.
-    # the remaining edges will be reserved to test and validation (10% and 5%, respectively).
-    # We don't add negative train samples since we will handle that during the training stage
-    transform_prediction = T.Compose([
-        T.NormalizeFeatures(),
-        T.ToDevice(device),
-        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
-                          add_negative_train_samples=False)
-    ])
-
-    datasets = {}
-
-    # Load the datasets as before
-    datasets['cora'] = load_dataset.load_ds('Cora', transform_prediction)
-    datasets['citeseer'] = load_dataset.load_ds('CiteSeer', transform_prediction)
-    datasets['pubmed'] = load_dataset.load_ds('PubMed', transform_prediction)
-
-    dataset = datasets['cora']
-    # Get the 3 splits
-    train_ds, val_ds, test_ds = dataset[0]
-
-    model = model.Graph_SAGE(dataset.num_features, dataset.num_classes)
-
-    # Define loss criterion => Binary Cross Entropy for link prediction
-    # We need to predict 1 if the link is present, 0 otherwise
-    criterion = torch.nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-
-    engine.train_link_prediction(model, train_ds, criterion, optimizer, 200)
-
-    acc = engine.eval_predictor(model, val_ds)
-    print(acc)
+# Others
+lr = parameters.lr
+weight_decay = parameters.weight_decay
 
 
+# ************************************ CLASSIFICATION DATASET ************************************
+
+# Normalize the features and put it on the appropriate device
+transform_classification = T.Compose([
+    T.NormalizeFeatures(),
+    T.ToDevice(device)
+])
+
+classification_datasets = {}
+
+# Load the 3 datasets and apply the transform needed
+classification_datasets['cora'] = load_dataset.load_ds('Cora', transform_classification)
+classification_datasets['citeseer'] = load_dataset.load_ds('CiteSeer', transform_classification)
+classification_datasets['pubmed'] = load_dataset.load_ds('PubMed', transform_classification)
+
+# print the information for each dataset
+for ds in classification_datasets.values():
+    load_dataset.print_ds_info(ds)
+    print('\n#################################\n')
+
+classification_dataset = classification_datasets[dataset_name]
 
 
+# ************************************ LINK PREDICTION DATASET ************************************
 
-"""
-# Crea modello MLP 1
-gat = model.GAT()
-mlp_1 = model.MLP()
-#Gat e mlp randomly initialized
-model_1 = GAT_MLP(gat, mlp)
+# Change transform for link prediction
+transform_prediction = T.Compose([
+    T.NormalizeFeatures(),
+    T.ToDevice(device),
+    T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
+                        add_negative_train_samples=False)
+])
 
-# Crea loss e optimizer che ottimizzi tutti i parametri del modello
-loss = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim(model_1.parameters())
-# Allenamento classificazione (train_classifier)
-engine.train(model_1,...)
+linkpred_datasets = {}
 
-################## FINE ALLENAMENTO 1 CLASSIFICAZIONE
+# Load the datasets as before
+linkpred_datasets['cora'] = load_dataset.load_ds('Cora', transform_prediction)
+linkpred_datasets['citeseer'] = load_dataset.load_ds('CiteSeer', transform_prediction)
+linkpred_datasets['pubmed'] = load_dataset.load_ds('PubMed', transform_prediction)
 
-mlp_2 = model.MLP()
-# Riciclando gat precendente => Non vuoi che i pesi inizializzati random dell'MLP vadano a cambiare erroneamente
-# I pesi della GAT
-# mlp_2 Randomly init
-model_2 = GAT_MLP(gat, mlp_2)
+linkpred_dataset = linkpred_datasets[dataset_name]
+# Get the 3 splits
+train_ds, val_ds, test_ds = linkpred_dataset[0]
 
-loss = torch.nn.BCEWithLogitsLoss()
-# Per le prime epoche_totali / 2 (numero a caso) ==> allenare e settare i pesi della MLP
-optimizer = torch.optim(mlp_2.parameters(), ...)
-engine.train_link_prediction(model_2, optimizer, epochs=EPOCHE TOTALI / 2) 
 
-# Una volta che i pesi della MLP sono stati settati correttamente, fai il fine-tuning della rete intera
-optimizer = torch.optim(model_2.parameters(),...)
-engine.train_link_prediction(model_2, optimizer, epochs=RESTANTI EPOCHE PER RAGGIUNGERE IL TOTALE)
+# ************************************ TRAINING ************************************
 
-################### FINE ALLENAMENTO 2
+for net in nets:
 
-# Si riutilizza model_1 (siccome GAT ha i pesi aggiornati) per fare la classificazione
-# Fare comunque qualche epoca di fine tuning per avere poi i risultati (fare Copia incolla)
+    results_file = os.path.join(dataset_name + "_" + net + "_results.json")
+    if(os.path.exists(results_file)):
+        with open(results_file) as f:
+            results_dict = json.load(f)
+    else:
+        results_dict = {}
 
-# Oppure creare una nuova MLP e fare come si era fatto con la seconda iterazione della link prediction
-# prima fine tuning solo MLP e poi allenare MLP + GAT
+    params_file = os.path.join(dataset_name + "_" + net + "_params.json")
+    if(os.path.exists(params_file)):
+        with open(params_file) as f:
+            params_dict = json.load(f)
+    else:
+        params_dict = {}
 
-"""
+    if net == "GCN":
+        if use_grid_search:
+            param_combinations = utils.generate_combinations(parameters_grid_GCN)
+        else:
+            param_combinations = [parameters_GCN]
+    elif net == "GAT":
+        if use_grid_search:
+            param_combinations = utils.generate_combinations(parameters_grid_GAT)
+        else:
+            param_combinations = [parameters_GAT]
+    else:
+        if use_grid_search:
+            param_combinations = utils.generate_combinations(parameters_grid_SAGE)
+        else:
+            param_combinations = [parameters_SAGE]
 
-# Embedding size
-# hidden size (MLP)
-# Lr (Dai paper)
-# (Tutti parametri messi nei costruttori)
-# Epoche
+    i = 1
+    for params in param_combinations:
+
+        logdir = os.path.join("logs", "{}-{}".format(
+            datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+            ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(params.items())))
+        ))
+
+        writer = SummaryWriter(log_dir=logdir)
+
+        print("\n " + net + ", (iteration " + str(i) + " over " + str(len(param_combinations)) + ") - Testing parameters: ")
+        i += 1
+        for key, value in params.items():
+            print(f"{key}: {value}", end="\n") 
+        print("--------------------------------\n")
+
+        if net == "SAGE":
+            batch_generation = True
+            num_batch_neighbors = params["num_batch_neighbors"]
+        else:
+            batch_generation = False
+            num_batch_neighbors = []
+
+        # ************************************ CLASSIFICATION 1 ************************************
+
+        input_size = classification_dataset.num_features
+        hidden_channels = params["hidden_channels"]
+        output_size = params["embedding_size"]
+        dropout = params["dropout"]
+
+        if net == "GCN":
+            network = model.GCN(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
+        elif net == "GAT":
+            heads = params["heads"]
+            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, heads=heads, dropout=dropout)
+        else:
+            network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
+
+        input_size_mlp = params["embedding_size"]
+        output_size_mlp = classification_dataset.num_classes
+        hidden_sizes_mlp = params["hidden_sizes_mlp_class1"]
+        dropout_mlp = params["dropout_mlp_class1"]
+        mlp_classification1 = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)
+
+        if net == "GCN":
+            model_classification1 = model.GCN_MLP(network, mlp_classification1)
+        elif net == "GAT":
+            model_classification1 = model.GAT_MLP(network, mlp_classification1)
+        else:
+            model_classification1 = model.SAGE_MLP(network, mlp_classification1)
+        
+        model_classification1 = model_classification1.to(device)
+
+        # define the loss function and the optimizer. The learning rate is found on papers, same goes for the learning rate decay
+        # and the weight decay
+        criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion => CrossEntropyLoss in the case of classification
+        optimizer = torch.optim.Adam(model_classification1.parameters(), lr=lr, weight_decay=weight_decay)
+
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class1', 'model_name': net, 'starting_epoch': 0}
+
+        # run the training
+        epochs = params["epochs_classification1"]
+        results_class1 = engine.train_classification(model_classification1, classification_dataset.data, classification_dataset.data, criterion,
+                            optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
+
+        print("CLASSIFICATION 1 RESULTS")
+        for k,v in results_class1.items():
+            print(k + ":" + str(v[-1]))
+        print()
+
+
+        # ************************************ LINK PREDICTION ************************************
+
+        input_size_mlp = params["embedding_size"]
+        output_size_mlp = params["link_pred_out_size_mlp"]  # Non è legato al numero di classi ## e allora che mettiamo ? 
+        hidden_sizes_mlp = params["hidden_sizes_mlp_link_pred"]
+        dropout_mlp = params["dropout_mlp_link_pred"] 
+        mlp_linkpred = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)
+
+        if net == "GCN":
+            model_linkpred = model.GCN_MLP(network, mlp_linkpred)
+        elif net == "GAT":
+            model_linkpred = model.GAT_MLP(network, mlp_linkpred)
+        else:
+            model_linkpred = model.SAGE_MLP(network, mlp_linkpred)
+
+        model_linkpred = model_linkpred.to(device)
+
+        criterion = torch.nn.BCEWithLogitsLoss()
+
+        # run the training
+        epochs_linkpred = params["epochs_linkpred"]
+        net_freezed_linkpred = params["net_freezed_linkpred"]
+
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net, 'starting_epoch': epochs}
+
+        optimizer = torch.optim.Adam(mlp_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
+        epochs = int(epochs_linkpred*net_freezed_linkpred)
+        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
+
+        optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
+        epochs = epochs_linkpred - epochs
+        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
+
+        # ************************************ CLASSIFICATION 2 ************************************
+
+        input_size_mlp = params["embedding_size"]
+        output_size_mlp = classification_dataset.num_classes
+        hidden_sizes_mlp = params["hidden_sizes_mlp_class2"]
+        dropout_mlp = params["dropout_mlp_class2"]
+        mlp_classification2 = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)
+
+        if net == "GCN":
+            model_classification2 = model.GCN_MLP(network, mlp_classification2)
+        elif net == "GAT":
+            model_classification2 = model.GAT_MLP(network, mlp_classification2)
+        else:
+            model_classification2 = model.SAGE_MLP(network, mlp_classification2)
+
+        model_classification2 = model_classification2.to(device)
+
+        criterion = torch.nn.CrossEntropyLoss()
+
+        # run the training
+        epochs_classification2 = params["epochs_classification2"]
+        net_freezed_classification2 = params["net_freezed_classification2"]
+
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net, 'starting_epoch': epochs + epochs_linkpred}
+
+        optimizer = torch.optim.Adam(mlp_classification2.parameters(), lr=lr, weight_decay=weight_decay)
+        epochs = int(epochs_classification2*net_freezed_classification2)
+        results_class2a = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
+                            optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
+        
+        print("CLASSIFICATION 2a RESULTS")
+        for k, v in results_class2a.items():
+            print(k + ":" + str(v[-1]))
+        print()
+
+        optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr, weight_decay=weight_decay)
+        epochs = epochs_classification2 - epochs
+        results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
+                            optimizer, epochs, writer, writer_info, device, batch_generation, num_batch_neighbors)
+
+        print("CLASSIFICATION 2b RESULTS")
+        for k,v in results_class2b.items():
+            print(k + ":" + str(v[-1]))
+        print()
+
+        # ************************************ SAVING RESULTS ************************************
+
+        # params_string = ""     # part of the key that explicit the parameters used
+        # for k, v in params.items():
+        #     params_string = params_string + "_" + k[0:3] + "_" + str(v)
+
+        # Set key to use in dictionaries
+        key = net + "||"
+        for k, v in params.items():
+            key = key + k[0:3] + "_" + str(v) + "/"
+
+        # Save parameters used in the training
+        params_list = []
+        for k, r in params.items():
+            params_list.append((k, r))
+        params_dict[key] = params_list
+        with open(params_file, "w") as f:
+            json.dump(params_dict, f, indent = 4)
+
+        # Save results of the training
+        results_class1_list = []
+        for k, r in results_class1.items():
+            results_class1_list.append((k, r))
+
+        results_class2a_list = []
+        for k, r in results_class2a.items():
+            results_class2a_list.append((k, r))
+
+        results_class2b_list = []
+        for k, r in results_class2b.items():
+            results_class2b_list.append((k, r))
+
+        results_dict[key] = [("results_class1", results_class1_list),
+                             ("results_class2a", results_class2a_list),
+                             ("results_class2b", results_class2b_list) ]
+        
+        with open(results_file, "w") as f:
+            json.dump(results_dict, f, indent = 4)
+
+    filename = dataset_name + "_" + net + "_best_runs.txt"
+    get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, 5, print_output=False, save_output=True, file_name=filename)
