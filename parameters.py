@@ -15,7 +15,7 @@ parameters_grid_GCN = {
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
     "epochs_classification2": [50, 75],
-    "net_freezed_classification2": [0.4, 0.6]
+    "net_freezed_classification2": [0.4, 0.6],
 }
 
 parameters_GCN = {
@@ -33,7 +33,7 @@ parameters_GCN = {
     "epochs_linkpred": 50,
     "net_freezed_linkpred": 0.6,
     "epochs_classification2": 100,
-    "net_freezed_classification2": 0.4
+    "net_freezed_classification2": 0.4,
 }
 
 #GAT
@@ -53,7 +53,7 @@ parameters_grid_GAT = {
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
     "epochs_classification2": [25, 50],
-    "net_freezed_classification2": [0.4, 0.6]
+    "net_freezed_classification2": [0.4, 0.6],
 }
 
 parameters_GAT = {
@@ -72,7 +72,7 @@ parameters_GAT = {
     "epochs_linkpred": 50,
     "net_freezed_linkpred": 0.6,
     "epochs_classification2": 50,
-    "net_freezed_classification2": 0.6    
+    "net_freezed_classification2": 0.6,
 }
 
 # SAGE
@@ -92,7 +92,8 @@ parameters_grid_SAGE = {
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
     "epochs_classification2": [25, 50],
-    "net_freezed_classification2": [0.4, 0.6]
+    "net_freezed_classification2": [0.4, 0.6],
+    "batch_size": [32],
 }
 
 parameters_SAGE = {
@@ -111,11 +112,12 @@ parameters_SAGE = {
     "epochs_linkpred": 50,
     "net_freezed_linkpred": 0.6,
     "epochs_classification2": 50,
-    "net_freezed_classification2": 0.6
+    "net_freezed_classification2": 0.6,
+    "batch_size": 32
 }
 
-lr=0.01
-weight_decay=5e-4
+lr = 0.01
+weight_decay = 0.001
 
 # epochs_classification1 = [50, 100]
 # epochs_linkpred = [25, 50]
