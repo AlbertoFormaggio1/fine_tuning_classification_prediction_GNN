@@ -99,9 +99,14 @@ def train_classification(model, train_ds: torch.utils.data.DataLoader, val_ds: t
             results['val_loss'].append(val_loss)
             results['val_acc'].append(val_acc)
 
+            if writer_info['second_tr_e'] != None:
+                ep_to_add = writer_info['second_tr_e']
+            else:
+                ep_to_add = 0
+
             for k in results.keys():
                 writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{writer_info["training_step"]}/{k}',
-                                  results[k][-1], epoch)
+                                  results[k][-1], epoch + ep_to_add)
                 writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
                                   epoch + writer_info["starting_epoch"])
 
@@ -219,11 +224,16 @@ def train_link_prediction(model, train_ds, val_ds, loss_fn: torch.nn.Module,
             results['train_loss'].append(train_loss)
             results['train_acc'].append(train_acc)
 
+            if writer_info['second_tr_e'] != None:
+                ep_to_add = writer_info['second_tr_e']
+            else:
+                ep_to_add = 0
+
             # Add the metrics to the tensorboard writer.
             # We keep a chart cumulative of the whole training and one for each training stage (e.g. classification1 / link pred/  classification2)
             for k in results.keys():
                 writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{writer_info["training_step"]}/{k}',
-                                  results[k][-1], epoch)
+                                  results[k][-1], epoch + ep_to_add)
                 writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
                                   epoch + writer_info["starting_epoch"])
 
@@ -242,10 +252,15 @@ def train_link_prediction(model, train_ds, val_ds, loss_fn: torch.nn.Module,
             results['train_loss'].append(train_loss)
             results['train_acc'].append(train_acc)
 
+            if writer_info['second_tr_e'] != None:
+                ep_to_add = writer_info['second_tr_e']
+            else:
+                ep_to_add = 0
+
             for k in results.keys():
                 writer.add_scalar(
                     f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{writer_info["training_step"]}/{k}',
-                    results[k][-1], epoch)
+                    results[k][-1], epoch + ep_to_add)
                 writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
                                   epoch + writer_info["starting_epoch"])
 

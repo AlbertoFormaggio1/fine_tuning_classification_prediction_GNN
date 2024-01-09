@@ -186,7 +186,8 @@ for net in nets:
             reduction='sum')  # Define loss criterion => CrossEntropyLoss in the case of classification
         optimizer = torch.optim.Adam(model_classification1.parameters(), lr=lr, weight_decay=weight_decay)
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'class1', 'model_name': net, 'starting_epoch': 0}
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class1', 'second_tr_e': None, 'model_name': net,
+                       'starting_epoch': 0}
 
         # run the training
         epochs = params["epochs_classification1"]
@@ -224,16 +225,20 @@ for net in nets:
         epochs_linkpred = params["epochs_linkpred"]
         net_freezed_linkpred = params["net_freezed_linkpred"]
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net, 'starting_epoch': epochs}
+        epochs_cls = epochs
 
         lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_linkpred, eta_min=lr / 1e3)
 
         optimizer = torch.optim.Adam(mlp_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = int(epochs_linkpred*net_freezed_linkpred)
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
+                       'second_tr_e': None, 'starting_epoch': epochs_cls}
         engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
+                       'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs}
         optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = epochs_linkpred - epochs
         engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
@@ -263,7 +268,8 @@ for net in nets:
         epochs_classification2 = params["epochs_classification2"]
         net_freezed_classification2 = params["net_freezed_classification2"]
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net, 'starting_epoch': epochs + epochs_linkpred}
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net, 'second_tr_e': None,
+                       'starting_epoch': epochs_cls + epochs_linkpred}
 
         lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_classification2, eta_min=lr / 1e3)
 
@@ -278,6 +284,8 @@ for net in nets:
             print(k + ":" + str(v[-1]))
         print()
 
+        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net,
+                       'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs_linkpred + epochs}
         optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr, weight_decay=weight_decay)
         epochs = epochs_classification2 - epochs
         results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
