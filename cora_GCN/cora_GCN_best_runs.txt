@@ -1,6 +1,6 @@
 PARAMETERS OF THE 1 BEST RUNS IN cora with GCN:
 
-1) val_acc = 0.75
+1) val_acc = 0.726
 embedding_size : 64
 hidden_channels : 16
 dropout : 0.4

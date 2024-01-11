@@ -95,14 +95,17 @@ train_ds, val_ds, test_ds = linkpred_dataset[0]
 
 for net in nets:
 
-    results_file = os.path.join(dataset_name + "_" + net, dataset_name + "_" + net + "_results.json")
+    out_dir = dataset_name + "_" + net
+    os.makedirs(out_dir, exist_ok=True)
+
+    results_file = os.path.join(out_dir, dataset_name + "_" + net + "_results.json")
     if(os.path.exists(results_file)):
         with open(results_file) as f:
             results_dict = json.load(f)
     else:
         results_dict = {}
 
-    params_file = os.path.join(dataset_name + "_" + net, dataset_name + "_" + net + "_params.json")
+    params_file = os.path.join(out_dir, dataset_name + "_" + net + "_params.json")
     if(os.path.exists(params_file)):
         with open(params_file) as f:
             params_dict = json.load(f)
@@ -132,9 +135,7 @@ for net in nets:
             datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
             ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(params.items())))
         ))
-        print("-------  ", len(logdir))
         
-
         writer = SummaryWriter(log_dir=logdir)
 
         print("\n " + net + ", (iteration " + str(i) + " over " + str(len(param_combinations)) + ") - Testing parameters: ")
@@ -198,10 +199,11 @@ for net in nets:
                                                      optimizer, epochs, writer, writer_info, device, batch_generation,
                                                      num_batch_neighbors, batch_size, lr_schedule)
 
+        print()
         print("CLASSIFICATION 1 RESULTS")
         for k, v in results_class1.items():
             print(k + ":" + str(v[-1]))
-        print()
+        print("****************************************************** \n")
 
 
         # ************************************ LINK PREDICTION ************************************
@@ -246,6 +248,10 @@ for net in nets:
         engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
+        
+        print() 
+        print("LINK PREDICTION TRAINING DONE")
+        print("****************************************************** \n")
 
         # ************************************ CLASSIFICATION 2 ************************************
 
@@ -280,11 +286,12 @@ for net in nets:
         results_class2a = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
                                                       optimizer, epochs, writer, writer_info, device, batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
-        
+
+        print() 
         print("CLASSIFICATION 2a RESULTS")
         for k, v in results_class2a.items():
             print(k + ":" + str(v[-1]))
-        print()
+        print("****************************************************** \n")
 
         writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net,
                        'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs_linkpred + epochs}
@@ -294,10 +301,11 @@ for net in nets:
                                                       optimizer, epochs, writer, writer_info, device, batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
 
-        print("CLASSIFICATION 2b RESULTS")
+        print()
+        print("\nCLASSIFICATION 2b RESULTS")
         for k,v in results_class2b.items():
             print(k + ":" + str(v[-1]))
-        print()
+        print("****************************************************** \n")
 
         # ************************************ SAVING RESULTS ************************************
 
@@ -339,5 +347,5 @@ for net in nets:
             json.dump(results_dict, f, indent = 4)
 
     filename = dataset_name + "_" + net + "_best_runs.txt"
-    filepath = os.path.join(dataset_name + "_" + net, filename)
+    filepath = os.path.join(out_dir, filename)
     get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, 5, print_output=False, save_output=True, file_name=filepath)
