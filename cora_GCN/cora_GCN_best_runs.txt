@@ -1,0 +1,18 @@
+PARAMETERS OF THE 1 BEST RUNS IN cora with GCN:
+
+1) val_acc = 0.75
+embedding_size : 64
+hidden_channels : 16
+dropout : 0.4
+hidden_sizes_mlp_class1 : [15]
+hidden_sizes_mlp_link_pred : [10]
+hidden_sizes_mlp_class2 : [15]
+dropout_mlp_class1 : 0.3
+dropout_mlp_link_pred : 0
+dropout_mlp_class2 : 0.3
+link_pred_out_size_mlp : 16
+epochs_classification1 : 75
+epochs_linkpred : 50
+net_freezed_linkpred : 0.6
+epochs_classification2 : 100
+net_freezed_classification2 : 0.4
