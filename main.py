@@ -95,14 +95,14 @@ train_ds, val_ds, test_ds = linkpred_dataset[0]
 
 for net in nets:
 
-    results_file = os.path.join(dataset_name + "_" + net + "_results.json")
+    results_file = os.path.join(dataset_name + "_" + net, dataset_name + "_" + net + "_results.json")
     if(os.path.exists(results_file)):
         with open(results_file) as f:
             results_dict = json.load(f)
     else:
         results_dict = {}
 
-    params_file = os.path.join(dataset_name + "_" + net + "_params.json")
+    params_file = os.path.join(dataset_name + "_" + net, dataset_name + "_" + net + "_params.json")
     if(os.path.exists(params_file)):
         with open(params_file) as f:
             params_dict = json.load(f)
@@ -132,6 +132,8 @@ for net in nets:
             datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
             ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(params.items())))
         ))
+        print("-------  ", len(logdir))
+        
 
         writer = SummaryWriter(log_dir=logdir)
 
@@ -337,4 +339,5 @@ for net in nets:
             json.dump(results_dict, f, indent = 4)
 
     filename = dataset_name + "_" + net + "_best_runs.txt"
-    get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, 5, print_output=False, save_output=True, file_name=filename)
+    filepath = os.path.join(dataset_name + "_" + net, filename)
+    get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, 5, print_output=False, save_output=True, file_name=filepath)

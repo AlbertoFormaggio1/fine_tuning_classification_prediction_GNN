@@ -3,7 +3,7 @@
 parameters_grid_GCN = {
     "embedding_size": [32], #[32, 48, 64],
     "hidden_channels": [32], #[16, 32], 
-    "dropout": [0.6, 0.7], #[0.3, 0.6], # 0 pag 6
+    "dropout": [0.2], # [0.6, 0.7], #[0.3, 0.6], # 0 pag 6
     "hidden_sizes_mlp_class1": [[10]], #[[10], [15]],
     "hidden_sizes_mlp_link_pred": [[15]], #[[10], [15]],
     "hidden_sizes_mlp_class2": [[10]], #[[10], [15]],
@@ -15,7 +15,7 @@ parameters_grid_GCN = {
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
     "epochs_classification2": [50, 75],
-    "net_freezed_classification2": [0.4, 0.6],
+    "net_freezed_classification2": [0.4] #, 0.6],
 }
 
 parameters_GCN = {
