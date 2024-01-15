@@ -59,7 +59,7 @@ parameters_grid_GAT = {
 parameters_GAT = {
     "embedding_size": 64,
     "hidden_channels": 16,
-    "heads": 8,
+    "heads": 8, # in più rispetto a GCN e SAGE
     "dropout": 0.6,
     "hidden_sizes_mlp_class1": [20],
     "hidden_sizes_mlp_link_pred": [5],
@@ -86,14 +86,14 @@ parameters_grid_SAGE = {
     "dropout_mlp_class1": [0],
     "dropout_mlp_link_pred": [0],
     "dropout_mlp_class2": [0],
-    "num_batch_neighbors": [[10, 4], [15, 6]],
+    "num_batch_neighbors": [[10, 4], [15, 6]], # in più rispetto a GCN e GAT
     "link_pred_out_size_mlp" : [16],
     "epochs_classification1": [50, 100],
     "epochs_linkpred": [25, 50],
     "net_freezed_linkpred": [0.4, 0.6],
     "epochs_classification2": [25, 50],
     "net_freezed_classification2": [0.4, 0.6],
-    "batch_size": [32],
+    "batch_size": [32], # in più rispetto a GCN e GAT
 }
 
 parameters_SAGE = {

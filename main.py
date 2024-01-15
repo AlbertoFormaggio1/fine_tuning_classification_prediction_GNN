@@ -343,6 +343,17 @@ for net in nets:
                              ("results_class2a", results_class2a_list),
                              ("results_class2b", results_class2b_list) ]
         
+        # params["hidden_sizes_mlp_class1"] = str(params["hidden_sizes_mlp_class1"])
+        # params["hidden_sizes_mlp_link_pred"] = str(params["hidden_sizes_mlp_link_pred"])
+        # params["hidden_sizes_mlp_class2"] = str(params["hidden_sizes_mlp_class2"])
+        # if(net == "SAGE"):
+        #     params["num_batch_neighbors"] = str(params["num_batch_neighbors"])
+        
+        # for k, r in results_class2b.items():
+        #     results_class2b[k] = str(r)
+        
+        # writer.add_hparams(params, results_class2b)
+        
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)
 
