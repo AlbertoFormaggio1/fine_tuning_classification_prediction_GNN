@@ -73,7 +73,7 @@ def train_classification(model, train_ds: torch.utils.data.DataLoader, val_ds: t
             cur_train_loss, cur_train_acc = train_step_classification(model=model, ds=batch, loss_fn=loss_fn, opt=opt)
             if batch_generation:
                 # If we generated batches, then we get the size by doing batch.batch_size
-                batch_size = batch.batch_size
+                batch_size = batch.x[batch.train_mask].shape[0]
             else:
                 # Otherwise, we sum the values to 1 in the training mask (training mask has a 1 for every node to consider in the training set)
                 batch_size = torch.sum(batch.train_mask).item()
