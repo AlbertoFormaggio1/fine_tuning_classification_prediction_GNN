@@ -298,6 +298,7 @@ def train_step_link_pred_batch_gen(model: torch.nn.Module, batch, loss_fn: torch
 
     # Back-propagate the loss and update the parameters
     loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
     opt.step()
 
     return train_loss, train_acc, batch_size
@@ -342,6 +343,7 @@ def train_step_link_pred_neg_sampling(model: torch.nn.Module, train_ds, loss_fn:
     out = model.decode(z, edge_label_index).view(-1)
     loss = loss_fn(out, edge_label)
     loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
     opt.step()
 
     train_acc = (torch.sum(edge_label == torch.round(out.sigmoid()))).item() / edge_label.shape[0]
