@@ -3,3 +3,13 @@ data/
 __pycache__/
 *.pyc
 logs/
+parameters.py
+cora_GAT/
+citeseer_GAT/
+pubmed_GAT/
+cora_GCN/
+citeseer_GCN/
+pubmed_GCN/
+cora_SAGE/
+citeseer_SAGE/
+pubmed__SAGE/
