@@ -55,27 +55,82 @@ def find_best_params(dataset_name, net_name, results_dict, params_dict, num : in
                 print(name + " : " + str(val))
             print()
 
+    return sorted_accuracies
+
     # for i in range(len(sorted_accuracies)):
     #     print(str(i) + ": " + str(sorted_accuracies[i][1]))
+
+
+def count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath):
+
+    if num_best_runs > len(sorted_accuracies):
+        num_best_runs = len(sorted_accuracies)
+
+    params_counter = {}   # k = (dropout, 0.4), v = num
+    for j in range(num_best_runs):
+        for i in range(len(sorted_accuracies[0][2])):
+            name = sorted_accuracies[j][2][i][0]
+
+            val = sorted_accuracies[j][2][i][1]
+            if isinstance(val, list) and len(val) == 1:
+                sorted_accuracies[j][2][i][1] = int(val[0])
+            val = sorted_accuracies[j][2][i][1]
+
+            if (name, val) in params_counter.keys():
+                params_counter[(name, val)] += 1
+            else:
+                params_counter[(name, val)] = 1
+    
+    with open(filepath, "w") as file:
+
+        tolist = list(params_counter.items())
+        tolist = sorted(tolist, key=lambda x: (x[0][0], x[0][1]))
+
+        prev_param = tolist[0][0][0]
+        j = 1
+        file.write(str(j) + ") " + prev_param + "\n")
+
+        for i in range(len(tolist)):
+
+            if tolist[i][0][0] != prev_param:
+                j += 1
+                prev_param = tolist[i][0][0]
+                file.write("\n" + str(j) + ") " + prev_param + "\n")
+
+            file.write(str(tolist[i][0][1]) + "  -->  " + str(tolist[i][1]) + "\n")
+
+    
+
 
 if __name__ == "__main__":
 
     dataset_name = sys.argv[1] if len(sys.argv) > 1 else "cora"
-    net_name = sys.argv[2] if len(sys.argv) > 1 else "GCN"
+    net_name = sys.argv[2] if len(sys.argv) > 1 else "GAT"
 
-    results_file = os.path.join(dataset_name + "_" + net_name + "_results.json")
+    out_dir = dataset_name + "_" + net_name
+    os.makedirs(out_dir, exist_ok=True)
+    
+    results_file = os.path.join(out_dir, dataset_name + "_" + net_name + "_results.json")
     if(os.path.exists(results_file)):
         with open(results_file) as f:
             results_dict = json.load(f)
     else:
         results_dict = {}
 
-    params_file = os.path.join(dataset_name + "_" + net_name + "_params.json")
+    params_file = os.path.join(out_dir, dataset_name + "_" + net_name + "_params.json")
     if(os.path.exists(params_file)):
         with open(params_file) as f:
             params_dict = json.load(f)
     else:
         params_dict = {}
 
-    find_best_params(dataset_name, net_name, results_dict, params_dict, 3, print_output=True)
+    out_filename = dataset_name + "_" + net_name + "_best_runs.txt"
+    filepath = os.path.join(out_dir, out_filename)
+    num_best_runs = 20
+    
+    sorted_accuracies = find_best_params(dataset_name, net_name, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
     # find_best_params(dataset_name, net_name, results_dict, params_dict, 5, print_output=False, save_output=True, file_name="cora_GCN_best_runs.txt")
+
+    out_filename = dataset_name + "_" + net_name + "_params_counter.txt"
+    filepath = os.path.join(out_dir, out_filename)
+    count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)

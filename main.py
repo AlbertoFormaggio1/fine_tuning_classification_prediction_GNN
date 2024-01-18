@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 use_grid_search = False #False
 dataset_name = "cora"  # cora - citeseer - pubmed
-nets = ["GCN"]  # GCN - GAT - SAGE
+nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -357,6 +357,12 @@ for net in nets:
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)
 
+
+    num_best_runs = 20
     filename = dataset_name + "_" + net + "_best_runs.txt"
     filepath = os.path.join(out_dir, filename)
-    get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, 5, print_output=False, save_output=True, file_name=filepath)
+    sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
+
+    filename = dataset_name + "_" + net + "_params_counter.txt"
+    filepath = os.path.join(out_dir, filename)
+    get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
