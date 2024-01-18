@@ -73,8 +73,7 @@ def count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath):
 
             val = sorted_accuracies[j][2][i][1]
             if isinstance(val, list) and len(val) == 1:
-                sorted_accuracies[j][2][i][1] = int(val[0])
-            val = sorted_accuracies[j][2][i][1]
+                val = int(val[0])
 
             if (name, val) in params_counter.keys():
                 params_counter[(name, val)] += 1
