@@ -16,8 +16,8 @@ import parameters
 import utils
 
 random_seed = 42
-torch.manual_seed(random_seed)
-torch.cuda.manual_seed_all(random_seed)
+#torch.manual_seed(random_seed)
+#torch.cuda.manual_seed_all(random_seed)
 
 # select the device on which you should run the computation
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #************************************** COMMANDS ************************************
 
 use_grid_search = True #False
-dataset_name = "pubmed"  # cora - citeseer - pubmed
+dataset_name = "citeseer"  # cora - citeseer - pubmed
 nets = ["SAGE"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
@@ -187,7 +187,7 @@ for net in nets:
         # define the loss function and the optimizer. The learning rate is found on papers, same goes for the learning rate decay
         # and the weight decay
         criterion = torch.nn.CrossEntropyLoss(
-            reduction='sum')  # Define loss criterion => CrossEntropyLoss in the case of classification
+            reduction='sum', label_smoothing=0.1)  # Define loss criterion => CrossEntropyLoss in the case of classification
         optimizer = torch.optim.Adam(model_classification1.parameters(), lr=lr, weight_decay=weight_decay)
 
         writer_info = {'dataset_name': dataset_name, 'training_step': 'class1', 'second_tr_e': None, 'model_name': net,
@@ -206,6 +206,8 @@ for net in nets:
             print(k + ":" + str(v[-1]))
         print("****************************************************** \n")
 
+        _, acc1 = engine.eval_classifier(model_classification1, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        print(acc1)
 
         # ************************************ LINK PREDICTION ************************************
 
@@ -271,7 +273,7 @@ for net in nets:
 
         model_classification2 = model_classification2.to(device)
 
-        criterion = torch.nn.CrossEntropyLoss(reduction='sum')
+        criterion = torch.nn.CrossEntropyLoss(reduction='sum', label_smoothing=0.1)
 
         # run the training
         epochs_classification2 = params["epochs_classification2"]
@@ -310,6 +312,8 @@ for net in nets:
                 print(k + ":" + str(v[-1]))
             print("****************************************************** \n")
 
+        _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        print("test acc with LinkPrediction:", acc2)
         # ************************************ SAVING RESULTS ************************************
 
         # params_string = ""     # part of the key that explicit the parameters used
