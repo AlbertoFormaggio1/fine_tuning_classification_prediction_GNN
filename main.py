@@ -233,7 +233,7 @@ for net in nets:
         epochs_cls = epochs
 
         optimizer = torch.optim.Adam(mlp_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
-        lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_linkpred, eta_min=lr / 1e2)
+        lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_linkpred, eta_min=lr / 1e3)
 
         epochs = int(epochs_linkpred*net_freezed_linkpred)
         writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
@@ -241,7 +241,7 @@ for net in nets:
         engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
-        print(lr_schedule.get_lr())
+
         writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
                        'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs}
         optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
