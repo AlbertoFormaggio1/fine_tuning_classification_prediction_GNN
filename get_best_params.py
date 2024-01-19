@@ -9,17 +9,28 @@ def find_best_params(dataset_name, net_name, results_dict, params_dict, num : in
 
     val_accuracies = []
     for k, v in results_dict.items():
-        for i in range(len(v)):    # finde tuple associated to classification 2b
+
+        class2b_found = False
+        for i in range(len(v)):    # find tuple associated to classification 2b (if done, i.e. freeze < 1.0, otherwise classification 2a)
             if v[i][0] == "results_class2b":
+                if len(v[i][1]) > 0:
+                    class2b_found = True
                 for j in range(len(v[i][1])):  # find list associated to validation accuracy
                     if v[i][1][j][0] == "val_acc":
                         val_accuracies.append([k, v[i][1][j][1][-1], []])
+        
+        if not class2b_found:
+            for i in range(len(v)):    # finde tuple associated to classification 2b
+                if v[i][0] == "results_class2a":
+                    for j in range(len(v[i][1])):  # find list associated to validation accuracy
+                        if v[i][1][j][0] == "val_acc":
+                            val_accuracies.append([k, v[i][1][j][1][-1], []])
 
-    sorted_accuracies = sorted(val_accuracies, key=lambda x: -x[1])
-
+    sorted_accuracies = sorted(val_accuracies, key=lambda x: -x[1]) # sort by val_acc descending
+    
     for i in range(len(sorted_accuracies)): 
-        key = sorted_accuracies[i][0]
-        sorted_accuracies[i][2] = params_dict[key]
+        key = sorted_accuracies[i][0] # key identifying the run
+        sorted_accuracies[i][2] = params_dict[key] # get params of the run
     
     if num > len(sorted_accuracies):
         num = len(sorted_accuracies)
@@ -31,12 +42,12 @@ def find_best_params(dataset_name, net_name, results_dict, params_dict, num : in
 
                 endline1 = "" if j == num-1 else "\n"
 
-                net = sorted_accuracies[j][0].split("||")[0]
+                # net = sorted_accuracies[j][0].split("||")[0]
 
                 file.write(str(j+1) + ") val_acc = " + str(sorted_accuracies[j][1]) + "\n")
                 for i in range(len(sorted_accuracies[0][2])):
-                    name = sorted_accuracies[j][2][i][0]
-                    val = sorted_accuracies[j][2][i][1]
+                    name = sorted_accuracies[j][2][i][0]    # name of the param
+                    val = sorted_accuracies[j][2][i][1]     # val of the param
 
                     endline2 = "" if i == len(sorted_accuracies[0][2])-1 else "\n"
                     file.write(name + " : " + str(val) + endline2)
@@ -50,8 +61,8 @@ def find_best_params(dataset_name, net_name, results_dict, params_dict, num : in
 
             print(str(j+1) + ") val_acc = " + str(sorted_accuracies[j][1]))
             for i in range(len(sorted_accuracies[0][2])):
-                name = sorted_accuracies[j][2][i][0]
-                val = sorted_accuracies[j][2][i][1]
+                name = sorted_accuracies[j][2][i][0]    # name of the param
+                val = sorted_accuracies[j][2][i][1]     # val of the param
                 print(name + " : " + str(val))
             print()
 
@@ -66,14 +77,15 @@ def count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath):
     if num_best_runs > len(sorted_accuracies):
         num_best_runs = len(sorted_accuracies)
 
-    params_counter = {}   # k = (dropout, 0.4), v = num
+    params_counter = {}   # k = (dropout, 0.4), V = num
     for j in range(num_best_runs):
-        for i in range(len(sorted_accuracies[0][2])):
+        for i in range(len(sorted_accuracies[0][2])):   # elem of sorted_accuracies = [run_key, run_final_val_acc, [params_list]]
             name = sorted_accuracies[j][2][i][0]
-
             val = sorted_accuracies[j][2][i][1]
-            if isinstance(val, list) and len(val) == 1:
+            if isinstance(val, list) and len(val) == 1:     # manage params with list value (e.g., ml hidden sizes)
                 val = int(val[0])
+            # if isinstance(val, list):
+            #     val = '-'.join([str(v) for v in val])
 
             if (name, val) in params_counter.keys():
                 params_counter[(name, val)] += 1

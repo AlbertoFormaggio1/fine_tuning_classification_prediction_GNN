@@ -23,7 +23,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 #************************************** COMMANDS ************************************
 
-use_grid_search = False #False
+use_grid_search = True #False
 dataset_name = "cora"  # cora - citeseer - pubmed
 nets = ["GAT"]  # GCN - GAT - SAGE
 
@@ -241,13 +241,14 @@ for net in nets:
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
-                       'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs}
-        optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
-        epochs = epochs_linkpred - epochs
-        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
-                                     writer_info,
-                                     device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
+        if net_freezed_linkpred < 1.0:
+            writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
+                        'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs}
+            optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
+            epochs = epochs_linkpred - epochs
+            engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
+                                        writer_info,
+                                        device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
         
         print() 
         print("LINK PREDICTION TRAINING DONE")
@@ -293,19 +294,21 @@ for net in nets:
             print(k + ":" + str(v[-1]))
         print("****************************************************** \n")
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net,
-                       'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs_linkpred + epochs}
-        optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr, weight_decay=weight_decay)
-        epochs = epochs_classification2 - epochs
-        results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
+        results_class2b = {}
+        if net_freezed_classification2 < 1.0:
+
+            writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net,
+                        'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs_linkpred + epochs}
+            optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr, weight_decay=weight_decay)
+            epochs = epochs_classification2 - epochs
+            results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
                                                       optimizer, epochs, writer, writer_info, device, batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
-
-        print()
-        print("\nCLASSIFICATION 2b RESULTS")
-        for k,v in results_class2b.items():
-            print(k + ":" + str(v[-1]))
-        print("****************************************************** \n")
+            print()
+            print("\nCLASSIFICATION 2b RESULTS")
+            for k,v in results_class2b.items():
+                print(k + ":" + str(v[-1]))
+            print("****************************************************** \n")
 
         # ************************************ SAVING RESULTS ************************************
 
@@ -358,11 +361,12 @@ for net in nets:
             json.dump(results_dict, f, indent = 4)
 
 
-    num_best_runs = 20
-    filename = dataset_name + "_" + net + "_best_runs.txt"
-    filepath = os.path.join(out_dir, filename)
-    sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
+    if use_grid_search:
+        num_best_runs = 20
+        filename = dataset_name + "_" + net + "_best_runs.txt"
+        filepath = os.path.join(out_dir, filename)
+        sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
 
-    filename = dataset_name + "_" + net + "_params_counter.txt"
-    filepath = os.path.join(out_dir, filename)
-    get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
+        filename = dataset_name + "_" + net + "_params_counter.txt"
+        filepath = os.path.join(out_dir, filename)
+        get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
