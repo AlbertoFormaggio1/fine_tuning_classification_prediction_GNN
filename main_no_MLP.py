@@ -93,7 +93,7 @@ train_ds, val_ds, test_ds = linkpred_dataset[0]
 
 for net in nets:
 
-    out_dir = dataset_name + "_" + net
+    out_dir = "nomlp_" + dataset_name + "_" + net
     os.makedirs(out_dir, exist_ok=True)
 
     results_file = os.path.join(out_dir, dataset_name + "_" + net + "_results.json")
@@ -191,7 +191,7 @@ for net in nets:
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
+        writer_info = {'dataset_name': 'mo_mlp'+dataset_name, 'training_step': 'link_pred', 'model_name': net,
                        'second_tr_e': epochs, 'starting_epoch': 0 + epochs}
         optimizer = torch.optim.Adam(network.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
         epochs = epochs_linkpred - epochs
@@ -214,7 +214,7 @@ for net in nets:
         epochs_classification2 = params["epochs_classification2"]
         net_freezed_classification2 = params["net_freezed_classification2"]
 
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net, 'second_tr_e': None,
+        writer_info = {'dataset_name': 'no_mlp'+dataset_name, 'training_step': 'class2', 'model_name': net, 'second_tr_e': None,
                        'starting_epoch': epochs_linkpred}
 
         optimizer = torch.optim.Adam(network.parameters(), lr=lr, weight_decay=weight_decay)
