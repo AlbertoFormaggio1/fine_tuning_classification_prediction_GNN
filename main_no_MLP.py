@@ -16,25 +16,25 @@ import parameters
 import utils
 
 random_seed = 42
-#torch.manual_seed(random_seed)
-#torch.cuda.manual_seed_all(random_seed)
+# torch.manual_seed(random_seed)
+# torch.cuda.manual_seed_all(random_seed)
 
 # select the device on which you should run the computation
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-#************************************** COMMANDS ************************************
+# ************************************** COMMANDS ************************************
 
-use_grid_search = True #False
+use_grid_search = True  # False
 dataset_name = "pubmed"  # cora - citeseer - pubmed
 nets = ["SAGE"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
-#GCN
+# GCN
 parameters_grid_GCN = parameters.parameters_grid_GCN
 parameters_GCN = parameters.parameters_GCN
 
-#GAT
+# GAT
 parameters_grid_GAT = parameters.parameters_grid_GAT
 parameters_GAT = parameters.parameters_GAT
 
@@ -45,7 +45,6 @@ parameters_SAGE = parameters.parameters_SAGE
 # Others
 lr = parameters.lr
 weight_decay = parameters.weight_decay
-
 
 # ************************************ CLASSIFICATION DATASET ************************************
 
@@ -69,7 +68,6 @@ for ds in classification_datasets.values():
 
 classification_dataset = classification_datasets[dataset_name]
 
-
 # ************************************ LINK PREDICTION DATASET ************************************
 
 # Change transform for link prediction
@@ -77,7 +75,7 @@ transform_prediction = T.Compose([
     T.NormalizeFeatures(),
     T.ToDevice(device),
     T.RandomLinkSplit(num_val=0.1, num_test=0.1, is_undirected=True,
-                        add_negative_train_samples=False)
+                      add_negative_train_samples=False)
 ])
 
 linkpred_datasets = {}
@@ -91,7 +89,6 @@ linkpred_dataset = linkpred_datasets[dataset_name]
 # Get the 3 splits
 train_ds, val_ds, test_ds = linkpred_dataset[0]
 
-
 # ************************************ TRAINING ************************************
 
 for net in nets:
@@ -100,14 +97,14 @@ for net in nets:
     os.makedirs(out_dir, exist_ok=True)
 
     results_file = os.path.join(out_dir, dataset_name + "_" + net + "_results.json")
-    if(os.path.exists(results_file)):
+    if (os.path.exists(results_file)):
         with open(results_file) as f:
             results_dict = json.load(f)
     else:
         results_dict = {}
 
     params_file = os.path.join(out_dir, dataset_name + "_" + net + "_params.json")
-    if(os.path.exists(params_file)):
+    if (os.path.exists(params_file)):
         with open(params_file) as f:
             params_dict = json.load(f)
     else:
@@ -136,13 +133,14 @@ for net in nets:
             datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
             ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(params.items())))
         ))
-        
+
         writer = SummaryWriter(log_dir=logdir)
 
-        print("\n " + net + ", (iteration " + str(i) + " over " + str(len(param_combinations)) + ") - Testing parameters: ")
+        print("\n " + net + ", (iteration " + str(i) + " over " + str(
+            len(param_combinations)) + ") - Testing parameters: ")
         i += 1
         for key, value in params.items():
-            print(f"{key}: {value}", end="\n") 
+            print(f"{key}: {value}", end="\n")
         print("--------------------------------\n")
 
         if net == "SAGE":
@@ -162,69 +160,20 @@ for net in nets:
         dropout = params["dropout"]
 
         if net == "GCN":
-            network = model.GCN(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
+            network = model.GCN(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels,
+                                dropout=dropout)
         elif net == "GAT":
             heads = params["heads"]
-            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, heads=heads, dropout=dropout)
+            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels,
+                                heads=heads, dropout=dropout)
         else:
-            network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
+            network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size,
+                                       hidden_channels=hidden_channels, dropout=dropout)
 
-        input_size_mlp = params["embedding_size"]
-        output_size_mlp = classification_dataset.num_classes
-        hidden_sizes_mlp = params["hidden_sizes_mlp_class1"]
-        dropout_mlp = params["dropout_mlp_class1"]
-        mlp_classification1 = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)
-
-        if net == "GCN":
-            model_classification1 = model.GCN_MLP(network, mlp_classification1)
-        elif net == "GAT":
-            model_classification1 = model.GAT_MLP(network, mlp_classification1)
-        else:
-            model_classification1 = model.SAGE_MLP(network, mlp_classification1)
-        
-        model_classification1 = model_classification1.to(device)
-
-        # define the loss function and the optimizer. The learning rate is found on papers, same goes for the learning rate decay
-        # and the weight decay
-        criterion = torch.nn.CrossEntropyLoss(
-            reduction='sum', label_smoothing=0.1)  # Define loss criterion => CrossEntropyLoss in the case of classification
-        optimizer = torch.optim.Adam(model_classification1.parameters(), lr=lr, weight_decay=weight_decay)
-
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'class1', 'second_tr_e': None, 'model_name': net,
-                       'starting_epoch': 0}
-
-        # run the training
-        epochs = params["epochs_classification1"]
-        lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs, eta_min=lr / 1e3)
-        results_class1 = engine.train_classification(model_classification1, classification_dataset.data, classification_dataset.data, criterion,
-                                                     optimizer, epochs, writer, writer_info, device, batch_generation,
-                                                     num_batch_neighbors, batch_size, lr_schedule)
-
-        print()
-        print("CLASSIFICATION 1 RESULTS")
-        for k, v in results_class1.items():
-            print(k + ":" + str(v[-1]))
-        print("****************************************************** \n")
-
-        _, acc1 = engine.eval_classifier(model_classification1, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
-        print(acc1)
 
         # ************************************ LINK PREDICTION ************************************
 
-        input_size_mlp = params["embedding_size"]
-        output_size_mlp = params["link_pred_out_size_mlp"]  # Non è legato al numero di classi ## e allora che mettiamo ? 
-        hidden_sizes_mlp = params["hidden_sizes_mlp_link_pred"]
-        dropout_mlp = params["dropout_mlp_link_pred"] 
-        mlp_linkpred = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)
-
-        if net == "GCN":
-            model_linkpred = model.GCN_MLP(network, mlp_linkpred)
-        elif net == "GAT":
-            model_linkpred = model.GAT_MLP(network, mlp_linkpred)
-        else:
-            model_linkpred = model.SAGE_MLP(network, mlp_linkpred)
-
-        model_linkpred = model_linkpred.to(device)
+        network = network.to(device)
 
         criterion = torch.nn.BCEWithLogitsLoss(reduction='sum')
 
@@ -232,46 +181,32 @@ for net in nets:
         epochs_linkpred = params["epochs_linkpred"]
         net_freezed_linkpred = params["net_freezed_linkpred"]
 
-        epochs_cls = epochs
-
-        optimizer = torch.optim.Adam(mlp_linkpred.parameters(), lr=lr, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(network.parameters(), lr=lr, weight_decay=weight_decay)
         lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_linkpred, eta_min=lr / 1e3)
 
-        epochs = int(epochs_linkpred*net_freezed_linkpred)
+        epochs = int(epochs_linkpred * net_freezed_linkpred)
         writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
-                       'second_tr_e': None, 'starting_epoch': epochs_cls}
-        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
+                       'second_tr_e': None, 'starting_epoch': 0}
+        engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
         writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
-                       'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs}
-        optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
+                       'second_tr_e': epochs, 'starting_epoch': 0 + epochs}
+        optimizer = torch.optim.Adam(network.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
         epochs = epochs_linkpred - epochs
-        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
+        engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
-        
-        print() 
+
+        print()
         print("LINK PREDICTION TRAINING DONE")
         print("****************************************************** \n")
 
         # ************************************ CLASSIFICATION 2 ************************************
 
-        input_size_mlp = params["embedding_size"]
-        output_size_mlp = classification_dataset.num_classes
-        hidden_sizes_mlp = params["hidden_sizes_mlp_class2"]
-        dropout_mlp = params["dropout_mlp_class2"]
-        mlp_classification2 = model.MLP(input_size=input_size_mlp, num_classes=output_size_mlp, hidden_sizes=hidden_sizes_mlp, dropout=dropout_mlp)
 
-        if net == "GCN":
-            model_classification2 = model.GCN_MLP(network, mlp_classification2)
-        elif net == "GAT":
-            model_classification2 = model.GAT_MLP(network, mlp_classification2)
-        else:
-            model_classification2 = model.SAGE_MLP(network, mlp_classification2)
-
-        model_classification2 = model_classification2.to(device)
+        model_classification2 = network.to(device)
 
         criterion = torch.nn.CrossEntropyLoss(reduction='sum', label_smoothing=0.1)
 
@@ -280,17 +215,18 @@ for net in nets:
         net_freezed_classification2 = params["net_freezed_classification2"]
 
         writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net, 'second_tr_e': None,
-                       'starting_epoch': epochs_cls + epochs_linkpred}
+                       'starting_epoch': epochs_linkpred}
 
-        optimizer = torch.optim.Adam(mlp_classification2.parameters(), lr=lr, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(network.parameters(), lr=lr, weight_decay=weight_decay)
         lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_classification2, eta_min=lr / 1e2)
 
-        epochs = int(epochs_classification2*net_freezed_classification2)
-        results_class2a = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
+        epochs = int(epochs_classification2 * net_freezed_classification2)
+        results_class2a = engine.train_classification(model_classification2, classification_dataset.data,
+                                                      classification_dataset.data, criterion,
                                                       optimizer, epochs, writer, writer_info, device, batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
 
-        print() 
+        print()
         print("CLASSIFICATION 2a RESULTS")
         for k, v in results_class2a.items():
             print(k + ":" + str(v[-1]))
@@ -300,19 +236,23 @@ for net in nets:
         if net_freezed_classification2 < 1.0:
 
             writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net,
-                        'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs_linkpred + epochs}
-            optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
+                           'second_tr_e': epochs, 'starting_epoch': epochs_linkpred + epochs}
+            optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr_schedule.get_lr()[0],
+                                         weight_decay=weight_decay)
             epochs = epochs_classification2 - epochs
-            results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
-                                                      optimizer, epochs, writer, writer_info, device, batch_generation,
-                                                      num_batch_neighbors, batch_size, lr_schedule)
+            results_class2b = engine.train_classification(model_classification2, classification_dataset.data,
+                                                          classification_dataset.data, criterion,
+                                                          optimizer, epochs, writer, writer_info, device,
+                                                          batch_generation,
+                                                          num_batch_neighbors, batch_size, lr_schedule)
             print()
             print("\nCLASSIFICATION 2b RESULTS")
-            for k,v in results_class2b.items():
+            for k, v in results_class2b.items():
                 print(k + ":" + str(v[-1]))
             print("****************************************************** \n")
 
-        _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data, False,
+                                         batch_generation, device, num_batch_neighbors, batch_size)
         print("test acc with LinkPrediction:", acc2)
         # ************************************ SAVING RESULTS ************************************
 
@@ -331,12 +271,14 @@ for net in nets:
             params_list.append((k, r))
         params_dict[key] = params_list
         with open(params_file, "w") as f:
-            json.dump(params_dict, f, indent = 4)
+            json.dump(params_dict, f, indent=4)
 
+        """
         # Save results of the training
         results_class1_list = []
         for k, r in results_class1.items():
             results_class1_list.append((k, r))
+        """
 
         results_class2a_list = []
         for k, r in results_class2a.items():
@@ -346,30 +288,30 @@ for net in nets:
         for k, r in results_class2b.items():
             results_class2b_list.append((k, r))
 
-        results_dict[key] = [("results_class1", results_class1_list),
-                             ("results_class2a", results_class2a_list),
-                             ("results_class2b", results_class2b_list) ]
-        
+        results_dict[key] = [("results_class2a", results_class2a_list),
+                             ("results_class2b", results_class2b_list)]
+
         # params["hidden_sizes_mlp_class1"] = str(params["hidden_sizes_mlp_class1"])
         # params["hidden_sizes_mlp_link_pred"] = str(params["hidden_sizes_mlp_link_pred"])
         # params["hidden_sizes_mlp_class2"] = str(params["hidden_sizes_mlp_class2"])
         # if(net == "SAGE"):
         #     params["num_batch_neighbors"] = str(params["num_batch_neighbors"])
-        
+
         # for k, r in results_class2b.items():
         #     results_class2b[k] = str(r)
-        
-        # writer.add_hparams(params, results_class2b)
-        
-        with open(results_file, "w") as f:
-            json.dump(results_dict, f, indent = 4)
 
+        # writer.add_hparams(params, results_class2b)
+
+        with open(results_file, "w") as f:
+            json.dump(results_dict, f, indent=4)
 
     if use_grid_search:
         num_best_runs = 20
         filename = dataset_name + "_" + net + "_best_runs.txt"
         filepath = os.path.join(out_dir, filename)
-        sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
+        sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict,
+                                                             num_best_runs, print_output=False, save_output=True,
+                                                             file_name=filepath)
 
         filename = dataset_name + "_" + net + "_params_counter.txt"
         filepath = os.path.join(out_dir, filename)
