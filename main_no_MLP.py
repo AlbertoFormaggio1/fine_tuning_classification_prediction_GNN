@@ -24,9 +24,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # ************************************** COMMANDS ************************************
 
-use_grid_search = True  # False
-dataset_name = "pubmed"  # cora - citeseer - pubmed
-nets = ["SAGE"]  # GCN - GAT - SAGE
+use_grid_search = False  # False
+dataset_name = "citeseer"  # cora - citeseer - pubmed
+nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -156,7 +156,7 @@ for net in nets:
 
         input_size = classification_dataset.num_features
         hidden_channels = params["hidden_channels"]
-        output_size = params["embedding_size"]
+        output_size = classification_dataset.num_classes # params["embedding_size"]
         dropout = params["dropout"]
 
         if net == "GCN":
@@ -184,20 +184,20 @@ for net in nets:
         optimizer = torch.optim.Adam(network.parameters(), lr=lr, weight_decay=weight_decay)
         lr_schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs_linkpred, eta_min=lr / 1e3)
 
-        epochs = int(epochs_linkpred * net_freezed_linkpred)
-        writer_info = {'dataset_name': dataset_name, 'training_step': 'link_pred', 'model_name': net,
+        epochs = epochs_linkpred #int(epochs_linkpred * net_freezed_linkpred)
+        writer_info = {'dataset_name': 'no_mlp'+dataset_name, 'training_step': 'link_pred', 'model_name': net,
                        'second_tr_e': None, 'starting_epoch': 0}
         engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
-        writer_info = {'dataset_name': 'mo_mlp'+dataset_name, 'training_step': 'link_pred', 'model_name': net,
-                       'second_tr_e': epochs, 'starting_epoch': 0 + epochs}
-        optimizer = torch.optim.Adam(network.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
-        epochs = epochs_linkpred - epochs
-        engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
-                                     writer_info,
-                                     device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
+        # writer_info = {'dataset_name': 'no_mlp'+dataset_name, 'training_step': 'link_pred', 'model_name': net,
+        #                'second_tr_e': epochs, 'starting_epoch': 0 + epochs}
+        # optimizer = torch.optim.Adam(network.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
+        # epochs = epochs_linkpred - epochs
+        # engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
+        #                              writer_info,
+        #                              device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
         print()
         print("LINK PREDICTION TRAINING DONE")
@@ -235,7 +235,7 @@ for net in nets:
         results_class2b = {}
         if net_freezed_classification2 < 1.0:
 
-            writer_info = {'dataset_name': dataset_name, 'training_step': 'class2', 'model_name': net,
+            writer_info = {'dataset_name': 'no_mlp'+dataset_name, 'training_step': 'class2', 'model_name': net,
                            'second_tr_e': epochs, 'starting_epoch': epochs_linkpred + epochs}
             optimizer = torch.optim.Adam(model_classification2.parameters(), lr=lr_schedule.get_lr()[0],
                                          weight_decay=weight_decay)
