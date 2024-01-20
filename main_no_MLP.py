@@ -261,16 +261,11 @@ for net in nets:
             results_class1_list.append((k, r))
         """
 
-        results_class2a_list = []
-        for k, r in results_class2a.items():
-            results_class2a_list.append((k, r))
-
         results_class2b_list = []
         for k, r in results_class2b.items():
             results_class2b_list.append((k, r))
 
-        results_dict[key] = [("results_class2a", results_class2a_list),
-                             ("results_class2b", results_class2b_list)]
+        results_dict[key] = [("results_class2b", results_class2b_list)]
 
         # params["hidden_sizes_mlp_class1"] = str(params["hidden_sizes_mlp_class1"])
         # params["hidden_sizes_mlp_link_pred"] = str(params["hidden_sizes_mlp_link_pred"])
