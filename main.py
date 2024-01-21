@@ -379,11 +379,11 @@ for net in nets:
 
         print("\nClassification 1 val accuracy: ", results_class1["val_acc"][-1])
         print("Link prediction val accuracy: ", results_linkpred["val_acc"][-1])
-        print("Classification 2a val accuracy: ", results_class2b["val_acc"][-1])
+        print("Classification 2a val accuracy: ", results_class2a["val_acc"][-1])
         print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
 
         _, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
-        print("\n Test accuracy: ", test_acc)
+        print("\nTest accuracy: ", test_acc)
         
         print()
         print("*****************************************************************************")

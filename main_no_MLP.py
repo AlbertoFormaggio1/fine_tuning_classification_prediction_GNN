@@ -25,9 +25,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # ************************************** COMMANDS ************************************
 
-use_grid_search = True  # False
-dataset_name = "pubmed"  # cora - citeseer - pubmed
-nets = ["SAGE"]  # GCN - GAT - SAGE
+use_grid_search = False  # False
+dataset_name = "cora"  # cora - citeseer - pubmed
+nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -173,10 +173,12 @@ for net in nets:
                                        hidden_channels=hidden_channels, dropout=dropout)
 
 
-        print(summary(network, classification_dataset.data.x, classification_dataset.data.edge_index, max_depth=5))
+        # print(summary(network, classification_dataset.data.x, classification_dataset.data.edge_index, max_depth=5))
 
 
         # ************************************ LINK PREDICTION ************************************
+
+        print("\n************************* TRAINING LINK PREDICTION *************************")
 
         network = network.to(device)
 
@@ -191,7 +193,7 @@ for net in nets:
         epochs = epochs_linkpred
         writer_info = {'dataset_name': 'no_mlp'+dataset_name, 'training_step': 'link_pred', 'model_name': net,
                        'second_tr_e': None, 'starting_epoch': 0}
-        engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
+        results_linkpred = engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
@@ -203,12 +205,12 @@ for net in nets:
         #                              writer_info,
         #                              device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
-        print()
-        print("LINK PREDICTION TRAINING DONE")
-        print("****************************************************** \n")
+        print() 
+        print("*****************************************************************************\n")
 
         # ************************************ CLASSIFICATION 2 ************************************
 
+        print("************************** TRAINING CLASSIFICATION **************************")
 
         model_classification2 = network.to(device)
 
@@ -227,15 +229,18 @@ for net in nets:
                                                       optimizer, epochs_classification2, writer, writer_info, device,
                                                       batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
-        print()
-        print("\nCLASSIFICATION 2b RESULTS")
-        for k, v in results_class2b.items():
-            print(k + ":" + str(v[-1]))
-        print("****************************************************** \n")
+        # print()
+        # print("\nCLASSIFICATION 2b RESULTS")
+        # for k, v in results_class2b.items():
+        #     print(k + ":" + str(v[-1]))
+        # print("****************************************************** \n")
+        # _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data, False,
+        #                                  batch_generation, device, num_batch_neighbors, batch_size)
+        # print("test acc with LinkPrediction:", acc2)
 
-        _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data, False,
-                                         batch_generation, device, num_batch_neighbors, batch_size)
-        print("test acc with LinkPrediction:", acc2)
+        print()
+        print("*****************************************************************************")
+
         # ************************************ SAVING RESULTS ************************************
 
         # params_string = ""     # part of the key that explicit the parameters used
@@ -281,6 +286,16 @@ for net in nets:
 
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent=4)
+        
+        print("\nLink prediction val accuracy: ", results_linkpred["val_acc"][-1])
+        print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
+
+        _, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        print("\nTest accuracy: ", test_acc)
+        
+        print()
+        print("*****************************************************************************")
+
 
     if use_grid_search:
         num_best_runs = 20
