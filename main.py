@@ -24,9 +24,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 #************************************** COMMANDS ************************************
 
-use_grid_search = True #False
-dataset_name = "pubmed"  # cora - citeseer - pubmed
-nets = ["SAGE"]  # GCN - GAT - SAGE
+use_grid_search = False #False
+dataset_name = "cora"  # cora - citeseer - pubmed
+nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -155,6 +155,8 @@ for net in nets:
             batch_size = None
 
         # ************************************ CLASSIFICATION 1 ************************************
+            
+        print("************************* TRAINING CLASSIFICATION 1 *************************")
 
         input_size = classification_dataset.num_features
         hidden_channels = params["hidden_channels"]
@@ -165,7 +167,8 @@ for net in nets:
             network = model.GCN(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
         elif net == "GAT":
             heads = params["heads"]
-            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, heads=heads, dropout=dropout)
+            heads_out = params["heads_out"]
+            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, heads=heads, heads_out=heads_out, dropout=dropout)
         else:
             network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
 
@@ -200,16 +203,21 @@ for net in nets:
                                                      optimizer, epochs, writer, writer_info, device, batch_generation,
                                                      num_batch_neighbors, batch_size, lr_schedule)
 
-        print()
-        print("CLASSIFICATION 1 RESULTS")
-        for k, v in results_class1.items():
-            print(k + ":" + str(v[-1]))
-        print("****************************************************** \n")
+        # print()
+        # print("CLASSIFICATION 1 RESULTS")
+        # for k, v in results_class1.items():
+        #     print(k + ":" + str(v[-1]))
+        # print("****************************************************** \n")
 
-        _, acc1 = engine.eval_classifier(model_classification1, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
-        print(acc1)
+        # _, acc1 = engine.eval_classifier(model_classification1, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        # print(acc1)
+
+        print()
+        print("*****************************************************************************\n")
 
         # ************************************ LINK PREDICTION ************************************
+
+        print("************************* TRAINING LINK PREDICTION *************************")
 
         input_size_mlp = params["embedding_size"]
         output_size_mlp = params["link_pred_out_size_mlp"]  # Non è legato al numero di classi ## e allora che mettiamo ? 
@@ -248,15 +256,16 @@ for net in nets:
                        'second_tr_e': epochs, 'starting_epoch': epochs_cls + epochs}
         optimizer = torch.optim.Adam(model_linkpred.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
         epochs = epochs_linkpred - epochs
-        engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
+        results_linkpred = engine.train_link_prediction(model_linkpred, train_ds, val_ds, criterion, optimizer, epochs, writer,
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
         
         print() 
-        print("LINK PREDICTION TRAINING DONE")
-        print("****************************************************** \n")
+        print("*****************************************************************************\n")
 
         # ************************************ CLASSIFICATION 2 ************************************
+
+        print("************************* TRAINING CLASSIFICATION 2 *************************")
 
         input_size_mlp = params["embedding_size"]
         output_size_mlp = classification_dataset.num_classes
@@ -290,11 +299,11 @@ for net in nets:
                                                       optimizer, epochs, writer, writer_info, device, batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
 
-        print() 
-        print("CLASSIFICATION 2a RESULTS")
-        for k, v in results_class2a.items():
-            print(k + ":" + str(v[-1]))
-        print("****************************************************** \n")
+        # print() 
+        # print("CLASSIFICATION 2a RESULTS")
+        # for k, v in results_class2a.items():
+        #     print(k + ":" + str(v[-1]))
+        # print("****************************************************** \n")
 
         results_class2b = {}
         if net_freezed_classification2 < 1.0:
@@ -306,14 +315,18 @@ for net in nets:
             results_class2b = engine.train_classification(model_classification2, classification_dataset.data, classification_dataset.data, criterion,
                                                       optimizer, epochs, writer, writer_info, device, batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
-            print()
-            print("\nCLASSIFICATION 2b RESULTS")
-            for k,v in results_class2b.items():
-                print(k + ":" + str(v[-1]))
-            print("****************************************************** \n")
+            # print()
+            # print("\nCLASSIFICATION 2b RESULTS")
+            # for k,v in results_class2b.items():
+            #     print(k + ":" + str(v[-1]))
+            # print("****************************************************** \n")
 
-        _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
-        print("test acc with LinkPrediction:", acc2)
+        
+        print()
+        print("*****************************************************************************")
+
+        # _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        # print("test acc with LinkPrediction:", acc2)
         # ************************************ SAVING RESULTS ************************************
 
         # params_string = ""     # part of the key that explicit the parameters used
@@ -364,6 +377,16 @@ for net in nets:
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)
 
+        print("\nClassification 1 val accuracy: ", results_class1["val_acc"][-1])
+        print("Link prediction val accuracy: ", results_linkpred["val_acc"][-1])
+        print("Classification 2a val accuracy: ", results_class2b["val_acc"][-1])
+        print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
+
+        _, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        print("\n Test accuracy: ", test_acc)
+        
+        print()
+        print("*****************************************************************************")
 
     if use_grid_search:
         num_best_runs = 20

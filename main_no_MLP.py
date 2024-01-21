@@ -165,8 +165,9 @@ for net in nets:
                                 dropout=dropout)
         elif net == "GAT":
             heads = params["heads"]
+            heads_out = params["heads_out"]
             network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels,
-                                heads=heads, dropout=dropout)
+                                heads=heads, heads_out=heads_out, dropout=dropout)
         else:
             network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size,
                                        hidden_channels=hidden_channels, dropout=dropout)

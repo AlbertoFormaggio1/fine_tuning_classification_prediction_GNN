@@ -70,13 +70,13 @@ class GCN(LinkPredictor):
 
 # https://arxiv.org/abs/2105.14491
 class GAT(LinkPredictor):
-    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, heads: int = 8, dropout: float = 0.6):
+    def __init__(self, input_size: int, embedding_size: int, hidden_channels: int = 16, heads: int = 8, heads_out: int = 1, dropout: float = 0.6):
         super().__init__()
         # 256 channels seemed the best in the paper (but it depends on the complexity of the dataset)
         # LR = 0.001/0.01
         self.conv1 = GATv2Conv(input_size, hidden_channels, heads=heads)
         # Maybe concat should be set to False for the last layer so that the outputs will be averaged.
-        self.conv2 = GATv2Conv(hidden_channels * heads, embedding_size, heads=1)
+        self.conv2 = GATv2Conv(hidden_channels * heads, embedding_size, heads=heads_out)
         self.dropout = dropout
 
     def forward(self, x, edge_index):

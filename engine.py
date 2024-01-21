@@ -265,7 +265,7 @@ def train_link_prediction(model, train_ds, val_ds, loss_fn: torch.nn.Module,
                                   epoch + writer_info["starting_epoch"])
 
     # dovrebbe diventare "return results"
-    return val_loss
+    return results #val_loss
 
 
 def train_step_link_pred_batch_gen(model: torch.nn.Module, batch, loss_fn: torch.nn.Module,
