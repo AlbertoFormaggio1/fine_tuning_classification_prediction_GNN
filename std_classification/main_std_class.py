@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #************************************** COMMANDS ************************************
 
 use_grid_search = False #False
-dataset_name = "cora"  # cora - citeseer - pubmed
+dataset_name = "pubmed"  # cora - citeseer - pubmed
 nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
@@ -146,7 +146,8 @@ for net in nets:
             network = model.GCN(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
         elif net == "GAT":
             heads = params["heads"]
-            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, heads=heads, dropout=dropout)
+            heads_out = params["heads_out"]
+            network = model.GAT(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, heads=heads, heads_out=heads_out, dropout=dropout)
         else:
             network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
 
@@ -218,7 +219,7 @@ for net in nets:
         
         test_acc_tensor = torch.tensor(results_dict[key]["test_acc"])
         results_dict[key]["mean"] = torch.mean(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else results_dict[key]["test_acc"][0]
-        results_dict[key]["var"] = torch.var(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else 0
+        results_dict[key]["var"] = torch.std(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else 0
         
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)

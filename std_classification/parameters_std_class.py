@@ -40,7 +40,8 @@ parameters_GCN = {
 parameters_GAT_cora = {
     "hidden_channels": 8,
     "heads": 8,
-    "dropout": 0.0,     # X
+    "heads_out": 1,
+    "dropout": 0.6,     # X
     "epochs": 200,
     "lr" : 0.05,
     "weight_decay" : 0.0005
@@ -49,7 +50,8 @@ parameters_GAT_cora = {
 parameters_GAT_citeseer = {
     "hidden_channels": 8,
     "heads": 8,
-    "dropout": 0.0,     # X
+    "heads_out": 1,
+    "dropout": 0.6,     # X
     "epochs": 200,
     "lr" : 0.05,
     "weight_decay" : 0.0005
@@ -58,10 +60,11 @@ parameters_GAT_citeseer = {
 parameters_GAT_pubmed = {
     "hidden_channels": 8,
     "heads": 8,
-    "dropout": 0.0,     # X
+    "heads_out": 8,
+    "dropout": 0.6,     # X
     "epochs": 200,
     "lr" : 0.05,
-    "weight_decay" : 0.0005
+    "weight_decay" : 0.0001
 }
 
 lr = 0.05
