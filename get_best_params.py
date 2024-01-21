@@ -45,10 +45,10 @@ def find_best_params(dataset_name, net_name, results_dict, params_dict, num : in
                 # net = sorted_accuracies[j][0].split("||")[0]
 
                 file.write(str(j+1) + ") val_acc = " + str(sorted_accuracies[j][1]) + "\n")
-                for i in range(len(sorted_accuracies[0][2])):
+                for i in range(len(sorted_accuracies[j][2])):
                     name = sorted_accuracies[j][2][i][0]    # name of the param
                     val = sorted_accuracies[j][2][i][1]     # val of the param
-
+                    
                     endline2 = "" if i == len(sorted_accuracies[0][2])-1 else "\n"
                     file.write(name + " : " + str(val) + endline2)
                 file.write(endline1 + endline1)

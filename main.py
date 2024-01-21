@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #************************************** COMMANDS ************************************
 
 use_grid_search = False #False
-dataset_name = "cora"  # cora - citeseer - pubmed
+dataset_name = "citeseer"  # cora - citeseer - pubmed
 nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
@@ -379,8 +379,10 @@ for net in nets:
 
         print("\nClassification 1 val accuracy: ", results_class1["val_acc"][-1])
         print("Link prediction val accuracy: ", results_linkpred["val_acc"][-1])
-        print("Classification 2a val accuracy: ", results_class2a["val_acc"][-1])
-        print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
+        if net_freezed_classification2 > 0.0:
+            print("Classification 2a val accuracy: ", results_class2a["val_acc"][-1])
+        if net_freezed_classification2 < 1.0:
+            print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
 
         _, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
         print("\nTest accuracy: ", test_acc)
