@@ -64,7 +64,7 @@ parameters_GAT_pubmed = {
     "dropout": 0.6,
     "epochs": 200,
     "lr" : 0.05,
-    "weight_decay" : 0.0001
+    "weight_decay" : 0.0005
 }
 
 lr = 0.05
