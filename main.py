@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #************************************** COMMANDS ************************************
 
 use_grid_search = False #False
-dataset_name = "citeseer"  # cora - citeseer - pubmed
+dataset_name = "cora"  # cora - citeseer - pubmed
 nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
@@ -163,6 +163,7 @@ for net in nets:
         output_size = params["embedding_size"]
         dropout = params["dropout"]
 
+        heads_out = 1
         if net == "GCN":
             network = model.GCN(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
         elif net == "GAT":
@@ -172,7 +173,7 @@ for net in nets:
         else:
             network = model.Graph_SAGE(input_size=input_size, embedding_size=output_size, hidden_channels=hidden_channels, dropout=dropout)
 
-        input_size_mlp = params["embedding_size"]
+        input_size_mlp = params["embedding_size"] * heads_out
         output_size_mlp = classification_dataset.num_classes
         hidden_sizes_mlp = params["hidden_sizes_mlp_class1"]
         dropout_mlp = params["dropout_mlp_class1"]
@@ -219,7 +220,7 @@ for net in nets:
 
         print("************************* TRAINING LINK PREDICTION *************************")
 
-        input_size_mlp = params["embedding_size"]
+        input_size_mlp = params["embedding_size"] * heads_out
         output_size_mlp = params["link_pred_out_size_mlp"]  # Non è legato al numero di classi ## e allora che mettiamo ? 
         hidden_sizes_mlp = params["hidden_sizes_mlp_link_pred"]
         dropout_mlp = params["dropout_mlp_link_pred"] 
@@ -267,7 +268,7 @@ for net in nets:
 
         print("************************* TRAINING CLASSIFICATION 2 *************************")
 
-        input_size_mlp = params["embedding_size"]
+        input_size_mlp = params["embedding_size"] * heads_out
         output_size_mlp = classification_dataset.num_classes
         hidden_sizes_mlp = params["hidden_sizes_mlp_class2"]
         dropout_mlp = params["dropout_mlp_class2"]
@@ -347,22 +348,40 @@ for net in nets:
             json.dump(params_dict, f, indent = 4)
 
         # Save results of the training
-        results_class1_list = []
-        for k, r in results_class1.items():
-            results_class1_list.append((k, r))
+        # results_class1_list = []
+        # for k, r in results_class1.items():
+        #     results_class1_list.append((k, r[-1]))
 
-        results_class2a_list = []
-        for k, r in results_class2a.items():
-            results_class2a_list.append((k, r))
+        # results_class2a_list = []
+        # for k, r in results_class2a.items():
+        #     results_class2a_list.append((k, r[-1]))
 
-        results_class2b_list = []
-        for k, r in results_class2b.items():
-            results_class2b_list.append((k, r))
+        # results_class2b_list = []
+        # for k, r in results_class2b.items():
+        #     results_class2b_list.append((k, r[-1]))
 
-        results_dict[key] = [("results_class1", results_class1_list),
-                             ("results_class2a", results_class2a_list),
-                             ("results_class2b", results_class2b_list) ]
+        # results_dict[key] = [("results_class1", results_class1_list),
+        #                      ("results_class2a", results_class2a_list),
+        #                      ("results_class2b", results_class2b_list) ]
         
+
+        test_loss, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
+        results_class2b["test_loss"] = [test_loss]
+        results_class2b["test_acc"] = [test_acc]
+
+        if key in results_dict.keys():
+            for k, r in results_class2b.items():
+                results_dict[key][k].append(r[-1])
+        else:
+            results_dict[key] = {}
+            for k, r in results_class2b.items():
+                results_dict[key][k] = [r[-1]]
+
+        # test_acc_tensor = torch.tensor(results_dict[key]["test_acc"])
+        # results_dict[key]["mean"] = torch.mean(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else results_dict[key]["test_acc"][0]
+        # results_dict[key]["var"] = torch.std(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else 0
+        
+
         # params["hidden_sizes_mlp_class1"] = str(params["hidden_sizes_mlp_class1"])
         # params["hidden_sizes_mlp_link_pred"] = str(params["hidden_sizes_mlp_link_pred"])
         # params["hidden_sizes_mlp_class2"] = str(params["hidden_sizes_mlp_class2"])
@@ -383,19 +402,17 @@ for net in nets:
             print("Classification 2a val accuracy: ", results_class2a["val_acc"][-1])
         if net_freezed_classification2 < 1.0:
             print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
-
-        _, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
         print("\nTest accuracy: ", test_acc)
         
         print()
         print("*****************************************************************************")
 
-    if use_grid_search:
-        num_best_runs = 20
-        filename = dataset_name + "_" + net + "_best_runs.txt"
-        filepath = os.path.join(out_dir, filename)
-        sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
+    # if use_grid_search:
+    #     num_best_runs = 20
+    #     filename = dataset_name + "_" + net + "_best_runs.txt"
+    #     filepath = os.path.join(out_dir, filename)
+    #     sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
 
-        filename = dataset_name + "_" + net + "_params_counter.txt"
-        filepath = os.path.join(out_dir, filename)
-        get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
+    #     filename = dataset_name + "_" + net + "_params_counter.txt"
+    #     filepath = os.path.join(out_dir, filename)
+    #     get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)

@@ -41,42 +41,68 @@ parameters_GCN = {
 
 #GAT
 parameters_grid_GAT = {
-    "embedding_size": [64, 128, 256],
-    "hidden_channels": [16, 32], 
-    "heads": [1, 8],
-    "dropout": [0.4, 0.6, 0.8], #trovati in tabella pag 19 per pubmed
-    "hidden_sizes_mlp_class1": [[20]],
-    "hidden_sizes_mlp_link_pred": [[5]],
-    "hidden_sizes_mlp_class2": [[5]],
-    "dropout_mlp_class1": [0],
-    "dropout_mlp_link_pred": [0],
-    "dropout_mlp_class2": [0],
-    "link_pred_out_size_mlp" : [16],
-    "epochs_classification1": [50, 100],
-    "epochs_linkpred": [25, 50],
-    "net_freezed_linkpred": [0.4, 0.6],
-    "epochs_classification2": [25, 50],
-    "net_freezed_classification2": [0.4, 0.6],
+    "number_of_runs": [1, 2, 3, 4, 5],
+    "embedding_size": [8],      # X
+    "hidden_channels": [8],
+    "heads": [8],
+    "heads_out": [1],
+    "dropout": [0.6], 
+    "hidden_sizes_mlp_class1": [[16]],      # X
+    "hidden_sizes_mlp_link_pred": [[16]],   # X
+    "hidden_sizes_mlp_class2": [[16]],  # X
+    "dropout_mlp_class1": [0.4],        # X
+    "dropout_mlp_link_pred": [0.4],     # X
+    "dropout_mlp_class2": [0.4],        # X
+    "link_pred_out_size_mlp" : [16],    # X
+    "epochs_classification1": [200],    # X
+    "epochs_linkpred": [200],
+    "net_freezed_linkpred": [0.0],      # X
+    "epochs_classification2": [200],
+    "net_freezed_classification2": [0.4]    # X
 }
 
 parameters_GAT = {
-    "embedding_size": 64,
-    "hidden_channels": 16,
-    "heads": 8, # in più rispetto a GCN e SAGE
+    "embedding_size": 8,    # X
+    "hidden_channels": 8,
+    "heads": 8,
+    "heads_out": 1,
     "dropout": 0.6,
-    "hidden_sizes_mlp_class1": [20],
-    "hidden_sizes_mlp_link_pred": [5],
-    "hidden_sizes_mlp_class2": [5],
-    "dropout_mlp_class1": 0,
-    "dropout_mlp_link_pred": 0,
-    "dropout_mlp_class2": 0,
-    "link_pred_out_size_mlp" : 16,
-    "epochs_classification1": 100,
-    "epochs_linkpred": 50,
-    "net_freezed_linkpred": 0.6,
-    "epochs_classification2": 50,
-    "net_freezed_classification2": 0.6,
+    "hidden_sizes_mlp_class1": [16],        # X
+    "hidden_sizes_mlp_link_pred": [16],     # X
+    "hidden_sizes_mlp_class2": [16],        # X
+    "dropout_mlp_class1": 0.4,      # X
+    "dropout_mlp_link_pred": 0.4,   # X
+    "dropout_mlp_class2": 0.4,      # X
+    "link_pred_out_size_mlp" : 16,  # X
+    "epochs_classification1": 200,  # X
+    "epochs_linkpred": 200,
+    "net_freezed_linkpred": 0.0,    # X
+    "epochs_classification2": 200,
+    "net_freezed_classification2": 0.4      # X
 }
+lr = 0.01
+weight_decay = 0.001
+
+# parameters_GAT = {
+#     "embedding_size": 8,    # X
+#     "hidden_channels": 8,
+#     "heads": 8,
+#     "heads_out": 1,
+#     "dropout": 0.6,
+#     "hidden_sizes_mlp_class1": [16],        # X
+#     "hidden_sizes_mlp_link_pred": [16],     # X
+#     "hidden_sizes_mlp_class2": [16],        # X
+#     "dropout_mlp_class1": 0.4,      # X
+#     "dropout_mlp_link_pred": 0.4,   # X
+#     "dropout_mlp_class2": 0.4,      # X
+#     "link_pred_out_size_mlp" : 16,  # X
+#     "epochs_classification1": 200,  # X
+#     "epochs_linkpred": 200,
+#     "net_freezed_linkpred": 0.0,    # X
+#     "epochs_classification2": 250,
+#     "net_freezed_classification2": 0.4      # X
+# }
+
 
 # SAGE
 parameters_grid_SAGE = {
