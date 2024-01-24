@@ -1,9 +1,14 @@
-In this research endeavor, we explore the synergies between node classification and link prediction within the context of graph neural networks (GNNs). Our study aims to assess whether the fusion of these two tasks within a graph can yield advantages over employing GNNs solely for node classification. By integrating the predictive capabilities of link prediction with the node classification capabilities of GNNs, we seek to enhance the overall performance and effectiveness of graph-based models.
+## GNN Integration for Node Classification and Link Prediction
 
-In file main.py we use the combination GNN + MLP + Link Prediction,
-In file main_no_MLP.py we use the combination GNN + Link Prediction.
+### Research Overview:
 
-Before starting, in section ***COMMANDS*** (row 25-30 of main.py or main_no_mlp.py), set the GNN you want to use (GCN, GAT, SAGE) and the dataset (cora, citeseer, pubmed).
-If you want to test a set of hyperparameters, set "use_grid_search = True".
-In the file parameters.py insert the hyperparameters that you want to use. 
-Fill the dictionary parameters_[GNN] with your set of hyperparameter (and set use_grid_search = False), fill the dictionary parameters_grid_[GNN] instead if you want to test all the combinations of hyperparameters (and set use_grid_search = False)
+This repository investigates the collaborative dynamics between node classification and link prediction in the realm of Graph Neural Networks (GNNs). The primary goal is to evaluate the potential advantages gained by integrating these tasks within a graph, as opposed to solely utilizing GNNs for node classification. By merging the predictive capabilities of link prediction with the node classification features of GNNs, the aim is to enhance the overall performance and effectiveness of graph-based models.
+
+### Implementation Details:
+
+- In the "main.py" file, the combination of GNN + MLP (Multi-Layer Perceptron) + Link Prediction is implemented.
+- For an alternative approach without MLP, refer to the "main_no_MLP.py" file, utilizing the combination of GNN + Link Prediction.
+
+### Configuration:
+
+Before running the code, navigate to the ***COMMANDS*** section (lines 25-30) in either "main.py" or "main_no_mlp.py" to set the preferred GNN (GCN, GAT, SAGE) and dataset (cora, citeseer, pubmed). For hyperparameter testing, enable the "use_grid_search" option. Adjust hyperparameters in the "parameters.py" file, filling the "parameters_[GNN]" dictionary for specific sets, or use "parameters_grid_[GNN]" for comprehensive hyperparameter combination testing by setting "use_grid_search = True".
