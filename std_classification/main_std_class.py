@@ -25,8 +25,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #************************************** COMMANDS ************************************
 
 use_grid_search = False #False
-dataset_name = "pubmed"  # cora - citeseer - pubmed
-nets = ["GAT"]  # GCN - GAT - SAGE
+dataset_name = "citeseer"  # cora - citeseer - pubmed
+nets = ["SAGE"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -39,8 +39,8 @@ parameters_GCN = parameters.parameters_GCN
 # parameters_GAT = parameters.parameters_GAT
 
 # SAGE
-parameters_grid_SAGE = parameters.parameters_grid_SAGE
-parameters_SAGE = parameters.parameters_SAGE
+#parameters_grid_SAGE = parameters.parameters_grid_SAGE
+#parameters_SAGE = parameters.parameters_SAGE
 
 # Others
 # lr = parameters.lr
@@ -103,10 +103,14 @@ for net in nets:
         elif dataset_name == "pubmed":
             param_combinations = [parameters.parameters_GAT_pubmed]
     else:
-        if use_grid_search:
-            param_combinations = utils.generate_combinations(parameters_grid_SAGE)
-        else:
-            param_combinations = [parameters_SAGE]
+        # For sage when running this results are different than the ones reported in the paper
+        # since I removed label smoothing and cosineAnnealing
+        if dataset_name == "cora":
+            param_combinations = [parameters.parameters_SAGE_cora]
+        elif dataset_name == "citeseer":
+            param_combinations = [parameters.parameters_SAGE_citeseer]
+        elif dataset_name == "pubmed":
+            param_combinations = [parameters.parameters_SAGE_pubmed]
 
     i = 1
     for params in param_combinations:

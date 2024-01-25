@@ -128,14 +128,15 @@ def train_step_classification(model: torch.nn.Module, ds, loss_fn: torch.nn.Modu
     opt.zero_grad()  # Reset the gradient
     out = model(ds.x, ds.edge_index)  # Compute the response of the model
     loss = loss_fn(out[ds.train_mask], ds.y[ds.train_mask])  # Compute the loss based on training nodes
-    loss.backward()  # Propagate the gradient
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
-    opt.step()  # Update the weights
 
     train_loss = loss.item()  # Get the loss
     # Compute the classification accuracy
     train_cls = out.argmax(dim=-1)
     train_acc = torch.sum(train_cls[ds.train_mask] == ds.y[ds.train_mask])
+
+    loss.backward()  # Propagate the gradient
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.)
+    opt.step()  # Update the weights
 
     return train_loss, train_acc.item()
 
@@ -264,8 +265,7 @@ def train_link_prediction(model, train_ds, val_ds, loss_fn: torch.nn.Module,
                 writer.add_scalar(f'{writer_info["dataset_name"]}/{writer_info["model_name"]}/{k}', results[k][-1],
                                   epoch + writer_info["starting_epoch"])
 
-    # dovrebbe diventare "return results"
-    return results #val_loss
+    return results
 
 
 def train_step_link_pred_batch_gen(model: torch.nn.Module, batch, loss_fn: torch.nn.Module,
@@ -422,6 +422,8 @@ def eval_classifier(model: torch.nn.Module, loss_fn: torch.nn.Module, ds, is_val
     model = model.to(device)
     model.eval()
 
+    # In the tutorial for GraphSAGE, the authors of pyg don't generate batches
+    """
     if batch_generation:
         if is_validation:
             # [25, 10] is the neighbors to keep at each hop defined in the original paper
@@ -436,17 +438,18 @@ def eval_classifier(model: torch.nn.Module, loss_fn: torch.nn.Module, ds, is_val
             mask = ds.val_mask
         else:
             mask = ds.test_mask
+    """
+
+    validation_batches = [ds]
+    if is_validation:
+        mask = ds.val_mask
+    else:
+        mask = ds.test_mask
 
     eval_loss, eval_acc = .0, .0
     batch_num = 0
     for batch in validation_batches:
         batch = batch.to(device)
-        # Count the number of nodes in the current batch
-        if batch_generation:
-            if is_validation:
-                mask = batch.val_mask
-            else:
-                mask = batch.test_mask
 
         # Compute the response of the model
         out = model(batch.x, batch.edge_index)
