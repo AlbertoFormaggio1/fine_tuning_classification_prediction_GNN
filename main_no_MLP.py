@@ -25,8 +25,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # ************************************** COMMANDS ************************************
 
-use_grid_search = True  # False
-dataset_name = "pubmed"  # cora - citeseer - pubmed
+use_grid_search = False  # True
+dataset_name = "cora"  # cora - citeseer - pubmed
 nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
@@ -157,7 +157,7 @@ for net in nets:
 
         input_size = classification_dataset.num_features
         hidden_channels = params["hidden_channels"]
-        output_size = classification_dataset.num_classes # params["embedding_size"]
+        output_size = classification_dataset.num_classes
         dropout = params["dropout"]
 
         if net == "GCN":
@@ -197,14 +197,6 @@ for net in nets:
                                      writer_info,
                                      device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
 
-        # writer_info = {'dataset_name': 'no_mlp'+dataset_name, 'training_step': 'link_pred', 'model_name': net,
-        #                'second_tr_e': epochs, 'starting_epoch': 0 + epochs}
-        # optimizer = torch.optim.Adam(network.parameters(), lr=lr_schedule.get_lr()[0], weight_decay=weight_decay)
-        # epochs = epochs_linkpred - epochs
-        # engine.train_link_prediction(network, train_ds, val_ds, criterion, optimizer, epochs, writer,
-        #                              writer_info,
-        #                              device, batch_generation, num_batch_neighbors, batch_size, lr_schedule)
-
         print() 
         print("*****************************************************************************\n")
 
@@ -229,23 +221,11 @@ for net in nets:
                                                       optimizer, epochs_classification2, writer, writer_info, device,
                                                       batch_generation,
                                                       num_batch_neighbors, batch_size, lr_schedule)
-        # print()
-        # print("\nCLASSIFICATION 2b RESULTS")
-        # for k, v in results_class2b.items():
-        #     print(k + ":" + str(v[-1]))
-        # print("****************************************************** \n")
-        # _, acc2 = engine.eval_classifier(model_classification2, criterion, classification_dataset.data, False,
-        #                                  batch_generation, device, num_batch_neighbors, batch_size)
-        # print("test acc with LinkPrediction:", acc2)
 
         print()
         print("*****************************************************************************")
 
         # ************************************ SAVING RESULTS ************************************
-
-        # params_string = ""     # part of the key that explicit the parameters used
-        # for k, v in params.items():
-        #     params_string = params_string + "_" + k[0:3] + "_" + str(v)
 
         # Set key to use in dictionaries
         key = net + "||"
@@ -267,23 +247,6 @@ for net in nets:
             results_class1_list.append((k, r))
         """
 
-        # results_class2b_list = []
-        # for k, r in results_class2b.items():
-        #     results_class2b_list.append((k, r))
-
-        # results_dict[key] = [("results_class2b", results_class2b_list)]
-
-        # params["hidden_sizes_mlp_class1"] = str(params["hidden_sizes_mlp_class1"])
-        # params["hidden_sizes_mlp_link_pred"] = str(params["hidden_sizes_mlp_link_pred"])
-        # params["hidden_sizes_mlp_class2"] = str(params["hidden_sizes_mlp_class2"])
-        # if(net == "SAGE"):
-        #     params["num_batch_neighbors"] = str(params["num_batch_neighbors"])
-
-        # for k, r in results_class2b.items():
-        #     results_class2b[k] = str(r)
-
-        # writer.add_hparams(params, results_class2b)
-
         test_loss, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
         results_class2b["test_loss"] = [test_loss]
         results_class2b["test_acc"] = [test_acc]
@@ -302,22 +265,19 @@ for net in nets:
         print("\nLink prediction val accuracy: ", results_linkpred["val_acc"][-1])
         print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
         # print("\nTest accuracy: ", test_acc)
-
-        # _, test_acc = engine.eval_classifier(model_classification2, criterion, classification_dataset.data,False,batch_generation,device,num_batch_neighbors,batch_size)
-        # print("\nTest accuracy: ", test_acc)
         
         print()
         print("*****************************************************************************")
 
 
-    # if use_grid_search:
-    #     num_best_runs = 20
-    #     filename = dataset_name + "_" + net + "_best_runs.txt"
-    #     filepath = os.path.join(out_dir, filename)
-    #     sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict,
-    #                                                          num_best_runs, print_output=False, save_output=True,
-    #                                                          file_name=filepath)
+    if use_grid_search:
+        num_best_runs = 5
+        filename = dataset_name + "_" + net + "_best_runs.txt"
+        filepath = os.path.join(out_dir, filename)
+        sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict,
+                                                             num_best_runs, print_output=False, save_output=True,
+                                                             file_name=filepath)
 
-    #     filename = dataset_name + "_" + net + "_params_counter.txt"
-    #     filepath = os.path.join(out_dir, filename)
-    #     get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
+        filename = dataset_name + "_" + net + "_params_counter.txt"
+        filepath = os.path.join(out_dir, filename)
+        get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)

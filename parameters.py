@@ -40,68 +40,51 @@ parameters_GCN = {
 }
 
 #GAT
+
+# All parameters with the "with MLP" tag are used only when running a 
+# configuration with an MLP layer at the end of the network
 parameters_grid_GAT = {
     "number_of_runs": [1, 2, 3, 4, 5],
-    "embedding_size": [8],      # X
+    "embedding_size": [8],              # with MLP
     "hidden_channels": [8],
     "heads": [8],
     "heads_out": [1],
     "dropout": [0.6],
-    "hidden_sizes_mlp_class1": [[16]],      # X
-    "hidden_sizes_mlp_link_pred": [[16]],   # X
-    "hidden_sizes_mlp_class2": [[16]],  # X
-    "dropout_mlp_class1": [0.4],        # X
-    "dropout_mlp_link_pred": [0.4],     # X
-    "dropout_mlp_class2": [0.4],        # X
-    "link_pred_out_size_mlp" : [16],    # X
-    "epochs_classification1": [200],    # X
+    "hidden_sizes_mlp_class1": [[16]],      # with MLP
+    "hidden_sizes_mlp_link_pred": [[16]],   # with MLP
+    "hidden_sizes_mlp_class2": [[16]],      # with MLP
+    "dropout_mlp_class1": [0.4],        # with MLP
+    "dropout_mlp_link_pred": [0.4],     # with MLP
+    "dropout_mlp_class2": [0.4],        # with MLP
+    "link_pred_out_size_mlp" : [16],    # with MLP
+    "epochs_classification1": [200],    # with MLP
     "epochs_linkpred": [200],
-    "net_freezed_linkpred": [0.0],      # X
+    "net_freezed_linkpred": [0.0],      # with MLP
     "epochs_classification2": [200],
-    "net_freezed_classification2": [0.4]    # X
+    "net_freezed_classification2": [0.4]    # with MLP
 }
 
 parameters_GAT = {
-    "embedding_size": 8,    # X
+    "embedding_size": 8,                # with MLP
     "hidden_channels": 8,
     "heads": 8,
     "heads_out": 1,
     "dropout": 0.6,
-    "hidden_sizes_mlp_class1": [16],        # X
-    "hidden_sizes_mlp_link_pred": [16],     # X
-    "hidden_sizes_mlp_class2": [16],        # X
-    "dropout_mlp_class1": 0.4,      # X
-    "dropout_mlp_link_pred": 0.4,   # X
-    "dropout_mlp_class2": 0.4,      # X
-    "link_pred_out_size_mlp" : 16,  # X
-    "epochs_classification1": 200,  # X
+    "hidden_sizes_mlp_class1": [16],        # with MLP
+    "hidden_sizes_mlp_link_pred": [16],     # with MLP
+    "hidden_sizes_mlp_class2": [16],        # with MLP
+    "dropout_mlp_class1": 0.4,          # with MLP
+    "dropout_mlp_link_pred": 0.4,       # with MLP
+    "dropout_mlp_class2": 0.4,          # with MLP
+    "link_pred_out_size_mlp" : 16,      # with MLP
+    "epochs_classification1": 200,      # with MLP
     "epochs_linkpred": 200,
-    "net_freezed_linkpred": 0.0,    # X
+    "net_freezed_linkpred": 0.0,        # with MLP
     "epochs_classification2": 200,
-    "net_freezed_classification2": 0.4      # X
+    "net_freezed_classification2": 0.4      # with MLP
 }
 lr = 0.01
 weight_decay = 0.001
-
-# parameters_GAT = {
-#     "embedding_size": 8,    # X
-#     "hidden_channels": 8,
-#     "heads": 8,
-#     "heads_out": 1,
-#     "dropout": 0.6,
-#     "hidden_sizes_mlp_class1": [16],        # X
-#     "hidden_sizes_mlp_link_pred": [16],     # X
-#     "hidden_sizes_mlp_class2": [16],        # X
-#     "dropout_mlp_class1": 0.4,      # X
-#     "dropout_mlp_link_pred": 0.4,   # X
-#     "dropout_mlp_class2": 0.4,      # X
-#     "link_pred_out_size_mlp" : 16,  # X
-#     "epochs_classification1": 200,  # X
-#     "epochs_linkpred": 200,
-#     "net_freezed_linkpred": 0.0,    # X
-#     "epochs_classification2": 250,
-#     "net_freezed_classification2": 0.4      # X
-# }
 
 
 # SAGE
@@ -193,15 +176,3 @@ parameters_grid_SAGE_citeseer = {
     "net_freezed_classification2": [0.15],
     "batch_size": [1024], # Done
 }
-
-
-
-
-# epochs_classification1 = [50, 100]
-# epochs_linkpred = [25, 50]
-# net_freezed_linkpred = [0.4, 0.6]
-# epochs_classification2 = [25, 50]
-# net_freezed_classification2 = [0.4, 0.6]
-
-# aggiungere anche lr e decay rate e hidden_sizes?
-# diversificare i parametri di rete/mlp tra class1/linkpred/class2 ?

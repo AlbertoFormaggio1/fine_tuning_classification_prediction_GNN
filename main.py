@@ -377,22 +377,6 @@ for net in nets:
             for k, r in results_class2b.items():
                 results_dict[key][k] = [r[-1]]
 
-        # test_acc_tensor = torch.tensor(results_dict[key]["test_acc"])
-        # results_dict[key]["mean"] = torch.mean(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else results_dict[key]["test_acc"][0]
-        # results_dict[key]["var"] = torch.std(test_acc_tensor).tolist() if len(results_dict[key]["test_acc"]) > 1 else 0
-        
-
-        # params["hidden_sizes_mlp_class1"] = str(params["hidden_sizes_mlp_class1"])
-        # params["hidden_sizes_mlp_link_pred"] = str(params["hidden_sizes_mlp_link_pred"])
-        # params["hidden_sizes_mlp_class2"] = str(params["hidden_sizes_mlp_class2"])
-        # if(net == "SAGE"):
-        #     params["num_batch_neighbors"] = str(params["num_batch_neighbors"])
-        
-        # for k, r in results_class2b.items():
-        #     results_class2b[k] = str(r)
-        
-        # writer.add_hparams(params, results_class2b)
-        
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)
 
@@ -402,17 +386,17 @@ for net in nets:
             print("Classification 2a val accuracy: ", results_class2a["val_acc"][-1])
         if net_freezed_classification2 < 1.0:
             print("Classification 2b val accuracy: ", results_class2b["val_acc"][-1])
-        print("\nTest accuracy: ", test_acc)
+        # print("\nTest accuracy: ", test_acc)
         
         print()
         print("*****************************************************************************")
 
-    # if use_grid_search:
-    #     num_best_runs = 20
-    #     filename = dataset_name + "_" + net + "_best_runs.txt"
-    #     filepath = os.path.join(out_dir, filename)
-    #     sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
+    if use_grid_search:
+        num_best_runs = 20
+        filename = dataset_name + "_" + net + "_best_runs.txt"
+        filepath = os.path.join(out_dir, filename)
+        sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
 
-    #     filename = dataset_name + "_" + net + "_params_counter.txt"
-    #     filepath = os.path.join(out_dir, filename)
-    #     get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
+        filename = dataset_name + "_" + net + "_params_counter.txt"
+        filepath = os.path.join(out_dir, filename)
+        get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)

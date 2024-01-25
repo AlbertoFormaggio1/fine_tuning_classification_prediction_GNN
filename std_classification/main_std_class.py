@@ -9,7 +9,6 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.utils.tensorboard
 
 import engine_std_class as engine
-import get_best_params_std_class as get_best_params
 import load_dataset_std_class as load_dataset
 import model_std_class as model
 import utils_std_class as utils
@@ -25,8 +24,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #************************************** COMMANDS ************************************
 
 use_grid_search = False #False
-dataset_name = "citeseer"  # cora - citeseer - pubmed
-nets = ["SAGE"]  # GCN - GAT - SAGE
+dataset_name = "cora"  # cora - citeseer - pubmed
+nets = ["GAT"]  # GCN - GAT - SAGE
 
 # ************************************ PARAMETERS ************************************
 
@@ -197,21 +196,6 @@ for net in nets:
         key = net + "||"
         for k, v in params.items():
             key = key + k[0:3] + "_" + str(v) + "/"
-
-        # Save parameters used in the training
-        params_list = []
-        for k, r in params.items():
-            params_list.append((k, r))
-
-        # params_dict[key] = params_list
-        
-        # with open(params_file, "w") as f:
-        #     json.dump(params_dict, f, indent = 4)
-
-        # Save results of the training
-        # results_list = []
-        # for k, r in results_class.items():
-        #     results_list.append((k, r[-1]))
         
         if key in results_dict.keys():
             for k, r in results_class.items():
@@ -228,13 +212,3 @@ for net in nets:
         with open(results_file, "w") as f:
             json.dump(results_dict, f, indent = 4)
 
-
-    # if use_grid_search:
-    #     num_best_runs = 20
-    #     filename = dataset_name + "_" + net + "_best_runs.txt"
-    #     filepath = os.path.join(out_dir, filename)
-    #     sorted_accuracies = get_best_params.find_best_params(dataset_name, net, results_dict, params_dict, num_best_runs, print_output=False, save_output=True, file_name=filepath)
-
-    #     filename = dataset_name + "_" + net + "_params_counter.txt"
-    #     filepath = os.path.join(out_dir, filename)
-    #     get_best_params.count_params_in_best_runs(sorted_accuracies, num_best_runs, filepath)
